@@ -57,24 +57,94 @@ def init_database():
     connection.close()
 
 
-def get_last_shares_of_worker(worker: str, cursor: sqlite3.Cursor) -> tuple:
-    GET_RATING = '''SELECT validShares, staleShares, invalidShares FROM shares WHERE name=? ORDER BY timestamp DESC;'''
+def get_last_shares_of_worker(worker: str, cursor: sqlite3.Cursor) -> tuple:  # (valid, stale, invalid)
+    GET_SHARES = '''SELECT validShares, staleShares, invalidShares FROM shares WHERE name=? ORDER BY timestamp DESC;'''
 
-    GET_COUNT_OF_RATINGS = '''SELECT COUNT(validShares) FROM shares WHERE name=?;'''
+    GET_COUNT_OF_VALID_SHARES = '''SELECT COUNT(validShares) FROM shares WHERE name=?;'''
 
-    log.debug(f"Try reading previous rating of '{worker}'")
-    rating = None
-    if cursor.execute(GET_COUNT_OF_RATINGS, [worker]).fetchone()[0] > 0:
-        rating = cursor.execute(GET_RATING, [worker]).fetchone()[0]  # needs array, else error...
-        log.debug(f"Fetched previous rating: {rating}")
+    log.debug(f"Try reading previous valid shares of {worker}")
+    valid_shares = None
+    if cursor.execute(GET_COUNT_OF_VALID_SHARES, [worker]).fetchone()[0] > 0:
+        valid_shares = cursor.execute(GET_SHARES, [worker]).fetchone()  # needs array, else error...
+        log.debug(f"Fetched previous valid shares: {valid_shares}")
     else:
-        log.debug("Worker had no previous rating")
-    return rating
+        log.debug("Worker had no previous valid shares")
+    return valid_shares
 
 
-def insert_worker_values(worker_data: dict):
-    pass
+def insert_worker_values(worker_data: list[dict]):
+    INSERT_SHARES = '''INSERT INTO shares (name, validShares, staleShares, invalidShares, timestamp)
+                            VALUES (?, ?, ?, ?, ?)
+                            ON CONFLICT (name) DO UPDATE SET 
+                                validShares=excluded.validShares,
+                                staleShares=excluded.staleShares,
+                                invalidShares=excluded.invalidShares,
+                                timestamp=excluded.timestamp
+                            WHERE timestamp < excluded.timestamp'''
+
+    con = get_connection()
+    cursor = con.cursor()
+    timestamp = datetime.datetime.now(de_timezone)
+    for worker in worker_data:
+        name = worker.get("name")
+        valid = worker.get("validShares")
+        stale = worker.get("staleShares")
+        invalid = worker.get("invalidShares")
+
+        previous = get_last_shares_of_worker(name, cursor)
+        actual = (valid, stale, invalid)
+        if previous < actual:
+            INSERT_RESET = '''INSERT INTO resets 
+            (name, 
+            validSharesBefore, staleSharesBefore, invalidSharesBefore, 
+            validSharesAfter, staleSharesAfter, invalidSharesAfter, 
+            timestamp)
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?)'''
+            RESET_VALUES = (name, previous[0], previous[1], previous[2], actual[0], actual[1], actual[2], timestamp)
+            cursor.execute(INSERT_RESET, RESET_VALUES)
+            tuple_string = f"Worker was resettet!\n" \
+                           f"Time: {timestamp.strftime('%Y-%m-%d %H:%M:%S')}\n" \
+                           f"Worker: {name}\n" \
+                           f"Format: (Valid, Stale, Invalid)\n" \
+                           f"Previous: ({previous}\n" \
+                           f"Now: {actual}"
+            bot.send_message_to_group(tuple_string)
+            log.critical(f"RESET! {RESET_VALUES}")
+
+        VALUES = (name, valid, stale, invalid, timestamp)
+        cursor.execute(INSERT_SHARES, VALUES)
+        log.info(f"Inserted worker values: {VALUES}")
+
+    con.commit()
+    con.close()
 
 
-def insert_payouts(payout_data: dict):
-    pass
+def insert_payouts(data: dict):
+    INSERT_PAYOUTS = '''INSERT INTO payouts 
+                        (hash, value, fee, feePercent, feePrice, duration, confirmed, confirmedTimestamp) 
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?) 
+                        ON CONFLICT (hash) DO UPDATE SET 
+                            value=excluded.value,
+                            fee=excluded.fee,
+                            feePercent=excluded.feePercent,
+                            feePrice=excluded.feePrice,
+                            duration=excluded.duration,
+                            confirmed=excluded.confirmed,
+                            confirmedTimestamp=excluded.confirmedTimestamp
+                        WHERE confirmed != excluded.confirmed
+                        OR confirmedTimestamp != excluded.confirmedTimestamp;'''
+    con = get_connection()
+    cursor = con.cursor()
+    payout_data: list[dict] = data.get("data")
+    eth_eur_value: float = data.get("countervalue")
+    for payout in payout_data:
+        txHash: str = payout.get("hash")
+        timestamp: int = payout.get("timestamp")
+        value: int = payout.get("value")
+        fee: int = payout.get("fee")
+        feePercent: float = payout.get("feePercent")
+        feePrice: int = payout.get("feePrice")
+        duration: int = payout.get("duration")
+        confirmed: bool = payout.get("confirmed")
+        confirmedTimestamp: int = payout.get("confirmedTimestamp")
+

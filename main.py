@@ -18,6 +18,11 @@ nano_db.init_database()  # used to setup a non existing database
 bot.send_message_to_ferris("Script started", silent=True)
 
 
+def wei_to_eth(wei: int) -> float:
+    giga_giga = pow(10, 18)
+    return wei / giga_giga
+
+
 def monitor_nanopool():
     worker_data = nano_api.get_data_of_workers()  # sample: [(worker, rating),(worker, rating)...]
     nano_db.insert_worker_values(worker_data)
