@@ -1,0 +1,44 @@
+
+docker build ./ -t mmi --platform linux/arm64/v8
+docker save -o C:\Users\Ferris\Downloads\mmi.tar mmi
+"C:\Program Files\7-Zip\7z.exe" a -tgzip -aoa -mx3 C:\Users\Ferris\Downloads\mmi.tar.gz C:\Users\Ferris\Downloads\mmi.tar
+
+
+
+sftp ***REMOVED***@***REMOVED***
+put C:\Users\Ferris\Downloads\mmi-alpine.tar.gz mm/mmi-alpine.tar.gz
+
+docker load -i mmi.tar.gz
+docker run -v datavolume:/database --name mmc --restart always mmi
+
+#Only once
+sudo usermod -a -G docker $USER
+
+#Get Database
+cd C:\Users\Ferris\Downloads
+sftp root@***REMOVED***
+cd /mnt/***REMOVED***_userdata/docker-data/volumes/datavolume/_data
+get nanopool_mining.db
+
+
+batch
+
+@ECHO OFF
+cd C:\Users\Ferris\PycharmProjects\miningShareMonitoring
+
+echo Build Docker Image
+docker build . -t mmi-alpine --platform linux/arm64/v8
+
+echo Remove old Image in Downloads
+cd C:\Users\Ferris\Downloads
+del mmi-alpine.tar
+del mmi-alpine.tar.gz
+
+echo Save Docker Image to Downloads
+docker save -o C:\Users\Ferris\Downloads\mmi-alpine.tar mmi-alpine
+
+
+echo Compress Docker Image
+"C:\Program Files\7-Zip\7z.exe" a -tgzip -aoa -mx3 mmi-alpine.tar.gz mmi-alpine.tar
+echo Finished
+REM "C:\Program Files\7-Zip\7z.exe" a -tgzip -aoa -mx3 C:\Users\Ferris\Downloads\mmi.tar.gz C:\Users\Ferris\Downloads\mmi.tar
