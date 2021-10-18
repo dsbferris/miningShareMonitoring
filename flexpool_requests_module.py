@@ -5,11 +5,17 @@ import time
 import telegram_bot_module as bot
 
 
-api_url = "https://api.flexpool.io/v2"
-miner_address = "wallet"
+api_url: str
+miner_address: str
 
-if os.environ["DEBUG"] == "1":
-    miner_address = "0xF105D49D387cb84D06EDC9EAC0785eFbBb5a0c67"
+
+def init():
+    global api_url, miner_address
+    api_url = "https://api.flexpool.io/v2"
+    miner_address = "wallet"
+
+    if os.environ["DEBUG"] == "1":
+        miner_address = "0xF105D49D387cb84D06EDC9EAC0785eFbBb5a0c67"
 
 
 def request_error(url: str, params: dict, fail_count: int, e):

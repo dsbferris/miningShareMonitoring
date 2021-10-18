@@ -10,15 +10,16 @@ import flexpool_requests_module as flex_api
 import telegram_bot_module as bot
 
 
-os.environ["DEBUG"] = "1"
-
 logging_module.init_logging()  # setup logging format and file
 log.info("Started script")
-s = sched.scheduler(time.time, time.sleep)
 
 # nano_db.init_database()  # used to setup a non existing database
+flex_db.init()
+flex_api.init()
+bot.init()
 
-flex_db.init_database()
+os.environ["DEBUG"] = "1"
+s = sched.scheduler(time.time, time.sleep)
 bot.send_message_to_ferris("Script started", silent=True)
 
 

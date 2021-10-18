@@ -24,7 +24,7 @@ def get_connection() -> sqlite3.Connection:
     return sqlite3.connect(os.path.join(os.path.join(os.getcwd(), DATA_PATH), DATA_NAME))
 
 
-def init_database():
+def init():
     connection = get_connection()
     cursor = connection.cursor()
     CREATE_TABLE_SHARES = '''CREATE TABLE IF NOT EXISTS shares(

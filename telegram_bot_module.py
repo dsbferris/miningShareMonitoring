@@ -6,13 +6,22 @@ from zoneinfo import ZoneInfo
 import telegram
 
 
-telegram_bot_api_key = "API_KEY"
-group_chat_id = groupChatId
-private_chat_id = privateChatId
+telegram_bot_api_key: str
+group_chat_id: int
+private_chat_id: int
+de_timezone: ZoneInfo
+bot: telegram.Bot
+next_send_time: datetime
 
-de_timezone = ZoneInfo("Europe/Berlin")
-bot = telegram.Bot(token=telegram_bot_api_key)
-next_send_time = datetime.now(de_timezone) - timedelta(seconds=5)
+
+def init():
+    global telegram_bot_api_key, group_chat_id, private_chat_id, de_timezone, bot, next_send_time
+    telegram_bot_api_key = "API_KEY"
+    group_chat_id = groupChatId
+    private_chat_id = privateChatId
+    de_timezone = ZoneInfo("Europe/Berlin")
+    bot = telegram.Bot(token=telegram_bot_api_key)
+    next_send_time = datetime.now(de_timezone) - timedelta(seconds=5)
 
 
 def send_message(text: str, chat_id: int, silent: bool = False):
