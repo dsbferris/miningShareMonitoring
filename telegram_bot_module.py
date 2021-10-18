@@ -31,7 +31,7 @@ def send_message(text: str, chat_id: int, silent: bool = False):
         time.sleep(1)
 
     try:
-        bot.send_message(text=text, chat_id=chat_id, disable_notification=silent, disable_web_page_preview=True)
+        bot.send_message(text=text, chat_id=chat_id, disable_notification=silent, disable_web_page_preview=False)
     except Exception as e:
         log.error(e)
         error_occurred = True
