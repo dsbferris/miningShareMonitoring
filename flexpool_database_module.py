@@ -1,4 +1,3 @@
-import os
 import datetime
 from zoneinfo import ZoneInfo
 import sqlite3
@@ -14,6 +13,11 @@ de_timezone = ZoneInfo("Europe/Berlin")
 
 if not os.path.exists(DATA_PATH):
     os.mkdir(DATA_PATH)
+
+
+def wei_to_eth(wei: int) -> float:
+    giga_giga = pow(10, 18)
+    return wei / giga_giga
 
 
 def get_connection() -> sqlite3.Connection:
@@ -45,6 +49,7 @@ def init_database():
 
     CREATE_TABLE_PAYOUTS = '''CREATE TABLE IF NOT EXISTS payouts(
                                 hash TEXT PRIMARY KEY,
+                                timestamp TIMESTAMP,
                                 value INTEGER,
                                 fee INTEGER,
                                 feePercent REAL,
@@ -93,7 +98,7 @@ def insert_worker_values(worker_data: list[dict]):
 
         previous = get_last_shares_of_worker(name, cursor)
         actual = (valid, stale, invalid)
-        if previous < actual:
+        if previous is not None and previous < actual:
             INSERT_RESET = '''INSERT INTO resets 
             (name, 
             validSharesBefore, staleSharesBefore, invalidSharesBefore, 
@@ -114,6 +119,8 @@ def insert_worker_values(worker_data: list[dict]):
         VALUES = (name, valid, stale, invalid, timestamp)
         cursor.execute(INSERT_SHARES, VALUES)
         log.info(f"Inserted worker values: {VALUES}")
+        # if timestamp.hour == 14:
+            # GET_ALL_WORKER_CURRENT_VALUES = '''SELECT * from shares;'''
 
     con.commit()
     con.close()
@@ -121,9 +128,10 @@ def insert_worker_values(worker_data: list[dict]):
 
 def insert_payouts(data: dict):
     INSERT_PAYOUTS = '''INSERT INTO payouts 
-                        (hash, value, fee, feePercent, feePrice, duration, confirmed, confirmedTimestamp) 
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?) 
+                        (hash, timestamp, value, fee, feePercent, feePrice, duration, confirmed, confirmedTimestamp) 
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) 
                         ON CONFLICT (hash) DO UPDATE SET 
+                            timestamp=excluded.timestamp,
                             value=excluded.value,
                             fee=excluded.fee,
                             feePercent=excluded.feePercent,
@@ -136,7 +144,7 @@ def insert_payouts(data: dict):
     con = get_connection()
     cursor = con.cursor()
     payout_data: list[dict] = data.get("data")
-    eth_eur_value: float = data.get("countervalue")
+    counter_value: float = data.get("countervalue")
     for payout in payout_data:
         txHash: str = payout.get("hash")
         timestamp: int = payout.get("timestamp")
@@ -148,3 +156,21 @@ def insert_payouts(data: dict):
         confirmed: bool = payout.get("confirmed")
         confirmedTimestamp: int = payout.get("confirmedTimestamp")
 
+        payout_tuple = (txHash, timestamp, value, fee, feePercent, feePrice, duration, confirmed, confirmedTimestamp)
+        result = cursor.execute(INSERT_PAYOUTS, payout_tuple)
+
+        if result.rowcount == 1:
+            value_in_eth = wei_to_eth(value)
+            fee_in_eth = wei_to_eth(fee)
+            text = f"!!! PAYOUT DATA CHANGED !!!\n" \
+                   f"Current ETH-EUR: {counter_value}€\n" \
+                   f"Amount: {'{:.6f}'.format(value_in_eth)} ({'{:.2f}'.format(value_in_eth * counter_value)}€)\n" \
+                   f"Fee: {'{:.6f}'.format(fee_in_eth)} ({'{:.2f}'.format(fee_in_eth * counter_value)}€)\n" \
+                   f"Gas Price: {feePrice} Gwei\n" \
+                   f"Confirmed: {confirmed}\n" \
+                   f"Check on https://etherscan.io/tx/{txHash}"
+            # bot.send_message_to_group(text)
+            bot.send_message_to_ferris(text)
+
+    con.commit()
+    con.close()
