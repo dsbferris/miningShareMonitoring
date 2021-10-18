@@ -1,13 +1,14 @@
+import os
 import logging as log
 import requests
 import time
 import telegram_bot_module as bot
 
-test_mode = True
+
 api_url = "https://api.flexpool.io/v2"
 miner_address = "wallet"
 
-if test_mode:
+if os.environ["DEBUG"] == "1":
     miner_address = "0xF105D49D387cb84D06EDC9EAC0785eFbBb5a0c67"
 
 

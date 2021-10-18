@@ -1,8 +1,10 @@
+import os
 from datetime import datetime, timedelta
 import logging as log
 import time
 from zoneinfo import ZoneInfo
 import telegram
+
 
 telegram_bot_api_key = "API_KEY"
 group_chat_id = groupChatId
@@ -20,18 +22,21 @@ def send_message(text: str, chat_id: int, silent: bool = False):
         time.sleep(1)
 
     try:
-        bot.send_message(text=text, chat_id=chat_id, disable_notification=silent, disable_web_page_preview=False)
+        bot.send_message(text=text, chat_id=chat_id, disable_notification=silent, disable_web_page_preview=True)
     except Exception as e:
         log.error(e)
         error_occurred = True
     finally:
         next_send_time = datetime.now(de_timezone) + timedelta(seconds=5)
         if error_occurred:
-            return send_message_to_group(text, silent)
+            return send_message(text=text, chat_id=chat_id, silent=silent)
 
 
 def send_message_to_group(text: str, silent: bool = False):
-    send_message(text=text, chat_id=group_chat_id, silent=silent)
+    if os.environ["DEBUG"] == "1":
+        send_message(text=text, chat_id=private_chat_id, silent=silent)
+    else:
+        send_message_to_ferris(text, silent)
 
 
 def send_message_to_ferris(text: str, silent: bool = False):
@@ -40,5 +45,4 @@ def send_message_to_ferris(text: str, silent: bool = False):
 
 def send_database_to_ferris(relative_db_path: str):
     bot.send_document(chat_id=private_chat_id, document=open(relative_db_path, 'rb'))
-    global next_send_time
     return send_database_to_ferris(relative_db_path)
