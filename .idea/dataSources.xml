@@ -1,12 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="DataSourceManagerImpl" format="xml" multifile-model="true">
-    <data-source source="LOCAL" name="new_file" uuid="1d9a374a-5d23-48cf-b676-fc86f8838397">
+    <data-source source="LOCAL" name="flexpool_mining" uuid="13fe561a-8b85-4056-87b5-8f34b0e7ba34">
       <driver-ref>sqlite.xerial</driver-ref>
       <synchronize>true</synchronize>
       <jdbc-driver>org.sqlite.JDBC</jdbc-driver>
-      <jdbc-url>jdbc:sqlite:$PROJECT_DIR$/new_file</jdbc-url>
+      <jdbc-url>jdbc:sqlite:C:\Users\Ferris\PycharmProjects\miningShareMonitoring\database\flexpool_mining.db</jdbc-url>
       <working-dir>$ProjectFileDir$</working-dir>
+      <libraries>
+        <library>
+          <url>file://$APPLICATION_CONFIG_DIR$/jdbc-drivers/Xerial SQLiteJDBC/3.34.0/sqlite-jdbc-3.34.0.jar</url>
+        </library>
+      </libraries>
     </data-source>
   </component>
 </project>
