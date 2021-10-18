@@ -26,7 +26,7 @@ def send_message_to_ferris(text: str, silent: bool = False):
         log.error(e)
         log.error("Try again in 5 seconds")
         time.sleep(5)
-        return send_message_to_group(text, silent)
+        return send_message_to_ferris(text, silent)
 
 
 def send_database_to_ferris(relative_db_path: str):
@@ -36,4 +36,4 @@ def send_database_to_ferris(relative_db_path: str):
         log.error(e)
         log.error("Try again in 5 seconds")
         time.sleep(5)
-        return send_message_to_group(text, silent)
+        return send_database_to_ferris(relative_db_path)
