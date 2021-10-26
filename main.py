@@ -1,4 +1,5 @@
 import os
+import sys
 import time
 import sched
 import logging as log
@@ -9,7 +10,9 @@ import flexpool_database_module as flex_db
 import flexpool_requests_module as flex_api
 import telegram_bot_module as bot
 
-os.environ["DEBUG"] = "1"
+if not os.environ.__contains__("DEBUG"):
+    os.environ["DEBUG"] = "0"  # 0=TRUE, 1=FALSE
+
 
 logging_module.init_logging()  # setup logging format and file
 log.info("Started script")
@@ -17,6 +20,15 @@ log.info("Started script")
 flex_db.init()
 flex_api.init()
 bot.init()
+
+if sys.argv.__contains__("-sendFlexpoolDatabaseToFerris"):
+    bot.send_database_to_ferris(flex_db.DATA_PATH)
+    exit(0)
+
+if sys.argv.__contains__("-sendNanopoolDatabaseToFerris"):
+    bot.send_database_to_ferris(nano_db.get_database_path())
+    exit(0)
+
 
 s = sched.scheduler(time.time, time.sleep)
 bot.send_message_to_ferris("Script started", silent=True)

@@ -5,14 +5,14 @@ import logging as log
 import os
 import telegram_bot_module as bot
 
-
-DATA_PATH = "database"
+DATA_DIR = "database"
 DATA_NAME = "flexpool_mining.db"
+DATA_PATH = os.path.join(DATA_DIR, DATA_NAME)
 
 de_timezone = ZoneInfo("Europe/Berlin")
 
-if not os.path.exists(DATA_PATH):
-    os.mkdir(DATA_PATH)
+if not os.path.exists(DATA_DIR):
+    os.mkdir(DATA_DIR)
 
 
 def wei_to_eth(wei: int) -> float:
@@ -21,7 +21,7 @@ def wei_to_eth(wei: int) -> float:
 
 
 def get_connection() -> sqlite3.Connection:
-    return sqlite3.connect(os.path.join(os.path.join(os.getcwd(), DATA_PATH), DATA_NAME))
+    return sqlite3.connect(os.path.join(os.getcwd(), DATA_PATH))
 
 
 def init():
@@ -98,7 +98,7 @@ def insert_worker_values(worker_data: list[dict]):
 
         previous = get_last_shares_of_worker(name, cursor)
         actual = (valid, stale, invalid)
-        if previous is not None and previous < actual:
+        if previous is not None and previous > actual:
             INSERT_RESET = '''INSERT INTO resets 
             (name, 
             validSharesBefore, staleSharesBefore, invalidSharesBefore, 
@@ -111,7 +111,7 @@ def insert_worker_values(worker_data: list[dict]):
                            f"Time: {timestamp.strftime('%Y-%m-%d %H:%M:%S')}\n" \
                            f"Worker: {name}\n" \
                            f"Format: (Valid, Stale, Invalid)\n" \
-                           f"Previous: ({previous}\n" \
+                           f"Previous: {previous}\n" \
                            f"Now: {actual}"
             bot.send_message_to_group(tuple_string)
             log.critical(f"RESET! {RESET_VALUES}")
@@ -119,10 +119,18 @@ def insert_worker_values(worker_data: list[dict]):
         VALUES = (name, valid, stale, invalid, timestamp)
         cursor.execute(INSERT_SHARES, VALUES)
         log.info(f"Inserted worker values: {VALUES}")
-        # if timestamp.hour == 14:
-            # GET_ALL_WORKER_CURRENT_VALUES = '''SELECT * from shares;'''
 
     con.commit()
+    if timestamp.hour == 14:
+        GET_ALL_WORKER_CURRENT_VALUES = '''SELECT * from shares;'''
+        daily_data: list[tuple] = cursor.execute(GET_ALL_WORKER_CURRENT_VALUES).fetchall()
+        text = f"Daily report\n\n"
+        for d in daily_data:
+            text += f"Name: {d[0]}\n" \
+                    f"Valid shares: {d[1]}\n" \
+                    f"Stale shares: {d[2]}\n" \
+                    f"Invalid shares: {d[3]}\n"
+            bot.send_message_to_group(text, True)
     con.close()
 
 

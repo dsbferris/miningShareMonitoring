@@ -16,6 +16,10 @@ if not os.path.exists(DATA_PATH):
     os.mkdir(DATA_PATH)
 
 
+def get_database_path() -> str:
+    return os.path.join(os.getcwd(), os.path.join(DATA_PATH, DATA_NAME))
+
+
 def get_connection() -> sqlite3.Connection:
     return sqlite3.connect(os.path.join(os.path.join(os.getcwd(), DATA_PATH), DATA_NAME))
 
