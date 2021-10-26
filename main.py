@@ -4,11 +4,14 @@ import time
 import sched
 import logging as log
 import logging_module
-import nanopool_requests_module as nano_api
-import nanopool_database_module as nano_db
 import flexpool_database_module as flex_db
 import flexpool_requests_module as flex_api
 import telegram_bot_module as bot
+"""
+import nanopool_requests_module as nano_api
+import nanopool_database_module as nano_db
+"""
+
 
 if not os.environ.__contains__("DEBUG"):
     os.environ["DEBUG"] = "0"  # 0=TRUE, 1=FALSE
@@ -21,12 +24,19 @@ flex_db.init()
 flex_api.init()
 bot.init()
 
-if sys.argv.__contains__("-sendFlexpoolDatabaseToFerris"):
-    bot.send_database_to_ferris(flex_db.DATA_PATH)
+if sys.argv.__contains__("-sendDatabase"):
+    if not os.path.exists(flex_db.DATA_PATH):
+        log.error("Database file does not exists!")
+    else:
+        bot.send_database_to_ferris(flex_db.DATA_PATH)
     exit(0)
 
-if sys.argv.__contains__("-sendNanopoolDatabaseToFerris"):
-    bot.send_database_to_ferris(nano_db.get_database_path())
+
+if sys.argv.__contains__("-sendLog"):
+    if not os.path.exists("my_log.log"):
+        log.error("Log file does not exists!")
+    else:
+        bot.send_log_to_ferris("my_log.log")
     exit(0)
 
 
@@ -48,12 +58,15 @@ def monitor_flexpool():
     s.enter(3600, 1, monitor_flexpool)
 
 
+"""
 def monitor_nanopool():
     worker_data = nano_api.get_data_of_workers()  # sample: [(worker, rating),(worker, rating)...]
     nano_db.insert_worker_values(worker_data)
 
     payout_data = nano_api.get_payment_data()
     nano_db.insert_payouts(payout_data)
+
+"""
 
 
 s.enter(0, 1, monitor_flexpool)
