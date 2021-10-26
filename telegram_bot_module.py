@@ -54,4 +54,3 @@ def send_message_to_ferris(text: str, silent: bool = False):
 
 def send_database_to_ferris(relative_db_path: str):
     bot.send_document(chat_id=private_chat_id, document=open(relative_db_path, 'rb'))
-    return send_database_to_ferris(relative_db_path)
