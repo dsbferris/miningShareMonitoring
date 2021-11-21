@@ -35,17 +35,15 @@ def init():
                                 timestamp TIMESTAMP);'''
     cursor.execute(CREATE_TABLE_SHARES)
 
-    CREATE_TABLE_RESETS = '''CREATE TABLE IF NOT EXISTS resets(
+    CREATE_TABLE_SHARES_AT_PAYOUT = '''CREATE TABLE IF NOT EXISTS shares_per_payout(
                                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                                 name TEXT,
-                                validSharesBefore INTEGER,
-                                staleSharesBefore INTEGER,
-                                invalidSharesBefore INTEGER,
-                                validSharesAfter INTEGER,
-                                staleSharesAfter INTEGER,
-                                invalidSharesAfter INTEGER,
-                                timestamp TIMESTAMP);'''
-    cursor.execute(CREATE_TABLE_RESETS)
+                                validShares INTEGER,
+                                staleShares INTEGER,
+                                invalidShares INTEGER,
+                                hash TEXT,
+                                FOREIGN KEY (hash) REFERENCES payouts(hash));'''
+    cursor.execute(CREATE_TABLE_SHARES_AT_PAYOUT)
 
     CREATE_TABLE_PAYOUTS = '''CREATE TABLE IF NOT EXISTS payouts(
                                 hash TEXT PRIMARY KEY,
@@ -62,15 +60,17 @@ def init():
     connection.close()
 
 
-def get_last_shares_of_worker(worker: str, cursor: sqlite3.Cursor) -> tuple:  # (valid, stale, invalid)
+def get_last_shares_of_worker(worker: str, cursor: sqlite3.Cursor) -> list:  # (valid, stale, invalid)
     GET_SHARES = '''SELECT validShares, staleShares, invalidShares FROM shares WHERE name=? ORDER BY timestamp DESC;'''
 
     GET_COUNT_OF_VALID_SHARES = '''SELECT COUNT(validShares) FROM shares WHERE name=?;'''
 
     log.debug(f"Try reading previous valid shares of {worker}")
     valid_shares = None
-    if cursor.execute(GET_COUNT_OF_VALID_SHARES, [worker]).fetchone()[0] > 0:
-        valid_shares = cursor.execute(GET_SHARES, [worker]).fetchone()  # needs array, else error...
+    count = cursor.execute(GET_COUNT_OF_VALID_SHARES, [worker]).fetchone()[0]
+    if count > 0:
+        valid_shares = cursor.execute(GET_SHARES, [worker]).fetchone() # needs array, else error...
+        valid_shares = list(valid_shares)
         log.debug(f"Fetched previous valid shares: {valid_shares}")
     else:
         log.debug("Worker had no previous valid shares")
@@ -78,14 +78,11 @@ def get_last_shares_of_worker(worker: str, cursor: sqlite3.Cursor) -> tuple:  # 
 
 
 def insert_worker_values(worker_data: list[dict]):
-    INSERT_SHARES = '''INSERT INTO shares (name, validShares, staleShares, invalidShares, timestamp)
-                            VALUES (?, ?, ?, ?, ?)
-                            ON CONFLICT (name) DO UPDATE SET 
-                                validShares=excluded.validShares,
-                                staleShares=excluded.staleShares,
-                                invalidShares=excluded.invalidShares,
-                                timestamp=excluded.timestamp
-                            WHERE timestamp < excluded.timestamp'''
+    JUST_INSERT_SHARES = '''INSERT INTO shares (name, validShares, staleShares, invalidShares, timestamp)
+                            VALUES (?, ?, ?, ?, ?);'''
+    ADD_UP_SHARES = '''UPDATE shares SET 
+                        validShares=?, staleShares=?, invalidShares=?, timestamp=? 
+                        WHERE name=?'''
 
     con = get_connection()
     cursor = con.cursor()
@@ -97,44 +94,47 @@ def insert_worker_values(worker_data: list[dict]):
         invalid = worker.get("invalidShares")
 
         previous = get_last_shares_of_worker(name, cursor)
-        actual = (valid, stale, invalid)
-        if previous is not None and previous > actual:
-            INSERT_RESET = '''INSERT INTO resets 
-            (name, 
-            validSharesBefore, staleSharesBefore, invalidSharesBefore, 
-            validSharesAfter, staleSharesAfter, invalidSharesAfter, 
-            timestamp)
-                                VALUES (?, ?, ?, ?, ?, ?, ?, ?)'''
-            RESET_VALUES = (name, previous[0], previous[1], previous[2], actual[0], actual[1], actual[2], timestamp)
-            cursor.execute(INSERT_RESET, RESET_VALUES)
-            tuple_string = f"Worker was resettet!\n" \
-                           f"Time: {timestamp.strftime('%Y-%m-%d %H:%M:%S')}\n" \
-                           f"Worker: {name}\n" \
-                           f"Format: (Valid, Stale, Invalid)\n" \
-                           f"Previous: {previous}\n" \
-                           f"Now: {actual}"
-            bot.send_message_to_group(tuple_string)
-            log.critical(f"RESET! {RESET_VALUES}")
-
-        VALUES = (name, valid, stale, invalid, timestamp)
-        cursor.execute(INSERT_SHARES, VALUES)
+        actual = [valid, stale, invalid]
+        if previous is None:
+            VALUES = [name] + actual + [timestamp]
+            cursor.execute(JUST_INSERT_SHARES, VALUES)
+        else:
+            new_actual = []
+            for i in range(0, len(previous)):
+                new_actual += [actual[i] + previous[i]]
+            VALUES = new_actual + [timestamp, name]
+            cursor.execute(ADD_UP_SHARES, VALUES)
         log.info(f"Inserted worker values: {VALUES}")
 
     con.commit()
-    if timestamp.hour == 14:
-        GET_ALL_WORKER_CURRENT_VALUES = '''SELECT * from shares;'''
-        daily_data: list[tuple] = cursor.execute(GET_ALL_WORKER_CURRENT_VALUES).fetchall()
-        text = f"Daily report\n\n"
-        for d in daily_data:
-            text += f"Name: {d[0]}\n" \
-                    f"Valid shares: {d[1]}\n" \
-                    f"Stale shares: {d[2]}\n" \
-                    f"Invalid shares: {d[3]}\n"
-            bot.send_message_to_group(text, True)
+    GET_ALL_WORKER_CURRENT_VALUES = '''SELECT * from shares;'''
+    daily_data: list[tuple] = cursor.execute(GET_ALL_WORKER_CURRENT_VALUES).fetchall()
+    text = f"Daily report\n\n"
+    for d in daily_data:
+        text += f"Name: {d[0]}\n" \
+                f"Valid shares: {d[1]}\n" \
+                f"Stale shares: {d[2]}\n" \
+                f"Invalid shares: {d[3]}\n"
+        bot.send_message_to_group(text, True)
     con.close()
 
 
-def insert_payouts(data: dict):
+def get_payouts_count() -> int:
+    GET_PAYOUTS_COUNT = '''SELECT COUNT(hash) FROM payouts'''
+    con = get_connection()
+    cursor = con.cursor()
+    return cursor.execute(GET_PAYOUTS_COUNT).fetchone()[0]
+
+
+def payout_happened():
+    pass
+
+
+def check_payout_happened():
+    pass
+
+
+def insert_payouts(payout_data: dict):
     INSERT_PAYOUTS = '''INSERT INTO payouts 
                         (hash, timestamp, value, fee, feePercent, feePrice, duration, confirmed, confirmedTimestamp) 
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) 
@@ -151,9 +151,9 @@ def insert_payouts(data: dict):
                         OR confirmedTimestamp != excluded.confirmedTimestamp;'''
     con = get_connection()
     cursor = con.cursor()
-    payout_data: list[dict] = data.get("data")
-    counter_value: float = data.get("countervalue")
-    for payout in payout_data:
+    data: list[dict] = payout_data.get("data")
+    counter_value: float = payout_data.get("countervalue")
+    for payout in data:
         txHash: str = payout.get("hash")
         timestamp: int = payout.get("timestamp")
         value: int = payout.get("value")
@@ -177,8 +177,8 @@ def insert_payouts(data: dict):
                    f"Gas Price: {feePrice} Gwei\n" \
                    f"Confirmed: {confirmed}\n" \
                    f"Check on https://etherscan.io/tx/{txHash}"
-            # bot.send_message_to_group(text)
-            bot.send_message_to_ferris(text)
+            bot.send_message_to_group(text)
+            # bot.send_message_to_ferris(text)
 
     con.commit()
     con.close()

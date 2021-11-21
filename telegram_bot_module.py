@@ -42,8 +42,8 @@ def send_message(text: str, chat_id: int, silent: bool = False):
 
 
 def send_message_to_group(text: str, silent: bool = False):
-    if os.environ["DEBUG"] == "1":
-        send_message(text=text, chat_id=private_chat_id, silent=silent)
+    if os.environ["PRODUCTION"] == "1":
+        send_message(text=text, chat_id=group_chat_id, silent=silent)
     else:
         send_message_to_ferris(text, silent)
 

@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="DataSourceManagerImpl" format="xml" multifile-model="true">
-    <data-source source="LOCAL" name="flexpool_mining" uuid="b5312364-bec5-457a-abf1-d8da51c602be">
+    <data-source source="LOCAL" name="flexpool_mining" uuid="04aaa3b0-3168-4ebd-86a4-d1051ba7f1b4">
       <driver-ref>sqlite.xerial</driver-ref>
       <synchronize>true</synchronize>
       <jdbc-driver>org.sqlite.JDBC</jdbc-driver>
-      <jdbc-url>jdbc:sqlite:C:\Users\Ferris\AppData\Roaming\JetBrains\PyCharm2021.2\docker\mmc-slim\app\database\flexpool_mining.db</jdbc-url>
+      <jdbc-url>jdbc:sqlite:C:\Users\Ferris\PycharmProjects\miningShareMonitoring\database\flexpool_mining.db</jdbc-url>
       <working-dir>$ProjectFileDir$</working-dir>
       <libraries>
         <library>
