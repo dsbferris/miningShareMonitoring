@@ -1,10 +1,11 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="main" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
+  <configuration default="false" name="main prod" type="PythonConfigurationType" factoryName="Python">
     <module name="miningShareMonitoring" />
     <option name="INTERPRETER_OPTIONS" value="" />
     <option name="PARENT_ENVS" value="true" />
     <envs>
       <env name="PYTHONUNBUFFERED" value="1" />
+      <env name="PRODUCTION" value="1" />
     </envs>
     <option name="SDK_HOME" value="" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />

@@ -3,14 +3,14 @@ from datetime import datetime, timedelta
 import logging as log
 import time
 from zoneinfo import ZoneInfo
-import telegram
-
+from telegram import Bot
+import payout_class as pc
 
 telegram_bot_api_key: str
 group_chat_id: int
 private_chat_id: int
 de_timezone: ZoneInfo
-bot: telegram.Bot
+bot: Bot
 next_send_time: datetime
 
 
@@ -20,7 +20,7 @@ def init():
     group_chat_id = groupChatId
     private_chat_id = privateChatId
     de_timezone = ZoneInfo("Europe/Berlin")
-    bot = telegram.Bot(token=telegram_bot_api_key)
+    bot = Bot(token=telegram_bot_api_key)
     next_send_time = datetime.now(de_timezone) - timedelta(seconds=5)
 
 
@@ -58,3 +58,43 @@ def send_database_to_ferris(relative_db_path: str):
 
 def send_log_to_ferris(relative_log_path: str):
     bot.send_document(chat_id=private_chat_id, document=open(relative_log_path, 'rb'))
+
+
+def daily_report(daily_data):
+    if os.environ["PRODUCTION"] != 1:
+        return
+    text = f"Daily report\n\n"
+    if len(daily_data) > 0:
+        for d in daily_data:
+            text += f"Name: {d[0]}\n" \
+                    f"Valid shares: {d[1]}\n" \
+                    f"Stale shares: {d[2]}\n" \
+                    f"Invalid shares: {d[3]}\n\n"
+        text = text.strip()
+        send_message_to_group(text, True)
+
+
+def payout_update(p: pc.Payout, counter_value):
+    if os.environ["PRODUCTION"] != 1:
+        return
+    text = f"!!! PAYOUT DATA UPDATED !!!\n" \
+           f"Current ETH-EUR: {counter_value}€\n" \
+           f"Amount: {'{:.6f}'.format(p.value)} ({'{:.2f}'.format(p.value * counter_value)}€)\n" \
+           f"Fee: {'{:.6f}'.format(p.fee)} ({'{:.2f}'.format(p.fee * counter_value)}€)\n" \
+           f"Gas Price: {p.feePrice} Gwei\n" \
+           f"Confirmed: {p.confirmed}\n" \
+           f"Check on https://etherscan.io/tx/{p.txHash}"
+    send_message_to_group(text)
+
+
+def payout_new(p: pc.Payout, counter_value):
+    if os.environ["PRODUCTION"] != 1:
+        return
+    text = f"!!! NEW PAYOUT !!!\n" \
+           f"Current ETH-EUR: {counter_value}€\n" \
+           f"Amount: {'{:.6f}'.format(p.value)} ({'{:.2f}'.format(p.value * counter_value)}€)\n" \
+           f"Fee: {'{:.6f}'.format(p.fee)} ({'{:.2f}'.format(p.fee * counter_value)}€)\n" \
+           f"Gas Price: {p.feePrice} Gwei\n" \
+           f"Confirmed: {p.confirmed}\n" \
+           f"Check on https://etherscan.io/tx/{p.txHash}"
+    send_message_to_group(text)

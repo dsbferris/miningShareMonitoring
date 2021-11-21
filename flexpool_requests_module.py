@@ -13,8 +13,9 @@ def init():
     api_url = "https://api.flexpool.io/v2"
     miner_address = "wallet"
 
-    # if os.environ["DEBUG"] == "1":
-    miner_address = "0xF105D49D387cb84D06EDC9EAC0785eFbBb5a0c67"
+    # REMOVE IF FINISHED
+    # if os.environ["PRODUCTION"] == "0":
+        # miner_address = "0xF105D49D387cb84D06EDC9EAC0785eFbBb5a0c67"
 
 
 def _request_error(url: str, params: dict, fail_count: int, e):
@@ -51,6 +52,7 @@ def get_data_of_workers() -> list[dict]:
 def get_payment_data() -> dict:
     url = api_url + "/miner/payments"
     params = dict(coin="eth", address=miner_address, countervalue="eur", page=0)
+    # TODO Check for more then 1 page. Priority LOW
     return _make_request(url, params)
 
 

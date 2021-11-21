@@ -41,18 +41,7 @@ def init():
 
 init()
 
-
-def check_for_first_payout():
-    payout_data = api.get_payment_data()
-    if payout_data is None:
-        log.debug("No payouts yet")
-        s.enter(3600, 1, check_for_first_payout())
-    else:
-        monitor_flexpool()
-
-
-if db.get_payouts_count() == 0:
-    s.enter(0, 1, check_for_first_payout())
+db.get_all_workers_shares()
 
 
 def monitor_shares():
