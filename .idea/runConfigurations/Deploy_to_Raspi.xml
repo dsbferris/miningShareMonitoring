@@ -1,0 +1,21 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Deploy to Raspi" type="docker-deploy" factoryName="dockerfile" server-name="Docker-Raspi">
+    <deployment type="dockerfile">
+      <settings>
+        <option name="imageTag" value="mmi" />
+        <option name="containerName" value="mmc" />
+        <option name="envVars">
+          <list>
+            <DockerEnvVarImpl>
+              <option name="name" value="PRODUCTION" />
+              <option name="value" value="0" />
+            </DockerEnvVarImpl>
+          </list>
+        </option>
+        <option name="commandLineOptions" value="-v datavolume:/app/database --restart on-failure" />
+        <option name="sourceFilePath" value="Dockerfile" />
+      </settings>
+    </deployment>
+    <method v="2" />
+  </configuration>
+</component>
