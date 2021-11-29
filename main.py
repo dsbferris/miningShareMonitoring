@@ -36,12 +36,10 @@ def init():
             bot.send_log_to_ferris("my_log.log")
         exit(0)
 
-    bot.send_message_to_ferris("Script started", silent=True)
+    # bot.send_message_to_ferris("Script started", silent=True)
 
 
 init()
-
-db.get_all_workers_shares()
 
 
 def monitor_shares():

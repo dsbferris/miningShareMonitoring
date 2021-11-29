@@ -4,6 +4,8 @@ from zoneinfo import ZoneInfo
 import sqlite3
 import logging as log
 import os
+
+import telegram_bot_module
 import telegram_bot_module as bot
 import payout_class as pc
 
@@ -144,7 +146,7 @@ def delete_worker(name: str):
 def get_workers_shares_for_payout(txHash: str):
     GET_WORKERS_SHARES_FOR_PAYOUT = '''SELECT * FROM shares_per_payout WHERE hash=?'''
     cursor = get_con_cursor()
-    fetched = cursor.execute(GET_WORKERS_SHARES_FOR_PAYOUT, [txHash])
+    fetched = cursor.execute(GET_WORKERS_SHARES_FOR_PAYOUT, [txHash]).fetchall()
     return fetched
 
 
@@ -162,7 +164,9 @@ def insert_worker_values_at_payout(p: pc.Payout, counter_value):
         VALUES = [name, valid, stale, invalid, p.txHash]
         cursor.execute(INSERT_WORKER_DATA_AT_PAYOUT, VALUES)
         delete_worker(name)
+    con.commit()
     stats = get_workers_shares_for_payout(p.txHash)
+    telegram_bot_module.worker_stats_per_payout(stats, p, counter_value)
     # TODO CONTINUE HERE!
     pass
     pass
@@ -182,20 +186,6 @@ def get_payouts() -> list[pc.Payout]:
 
 
 def insert_payouts(payout_data: dict):
-    '''INSERT_PAYOUTS = INSERT INTO payouts
-                        (hash, timestamp, value, fee, feePercent, feePrice, duration, confirmed, confirmedTimestamp) 
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) 
-                        ON CONFLICT (hash) DO UPDATE SET 
-                            timestamp=excluded.timestamp,
-                            value=excluded.value,
-                            fee=excluded.fee,
-                            feePercent=excluded.feePercent,
-                            feePrice=excluded.feePrice,
-                            duration=excluded.duration,
-                            confirmed=excluded.confirmed,
-                            confirmedTimestamp=excluded.confirmedTimestamp
-                        WHERE confirmed != excluded.confirmed
-                        OR confirmedTimestamp != excluded.confirmedTimestamp;'''
     JUST_INSERT_PAYOUT = '''INSERT INTO payouts 
                         (timestamp, value, fee, feePercent, feePrice, duration, confirmed, confirmedTimestamp, hash) 
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);'''
@@ -237,14 +227,12 @@ def insert_payouts(payout_data: dict):
     if len(new_payouts) > 0:
         for p in new_payouts:
             if db_hashset.__contains__(p.txHash):
-                pass
                 cursor.execute(UPDATE_PAYOUT, p.__iter__())
                 bot.payout_update(p, counter_value)
             else:
                 cursor.execute(JUST_INSERT_PAYOUT, p.__iter__())
                 bot.payout_new(p, counter_value)
-                if os.environ["PRODUCTION"] == 1:
-                    insert_worker_values_at_payout(p, counter_value)
+                insert_worker_values_at_payout(p, counter_value)
 
         con.commit()
     else:

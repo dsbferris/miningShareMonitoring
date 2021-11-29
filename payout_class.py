@@ -1,5 +1,6 @@
 import logging as log
 
+
 class Payout:
     timestamp: int
     value: float

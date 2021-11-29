@@ -98,3 +98,17 @@ def payout_new(p: pc.Payout, counter_value):
            f"Confirmed: {p.confirmed}\n" \
            f"Check on https://etherscan.io/tx/{p.txHash}"
     send_message_to_group(text)
+
+
+def worker_stats_per_payout(worker_stats: list, p: pc.Payout, counter_value: float):
+    total_shares = 0
+    for worker in worker_stats:
+        total_shares += worker[2]
+    text = "Worker statistics for this payout:\n" \
+           f"Countervalue of eth-eur: {counter_value}€\n\n"
+    for worker in worker_stats:
+        valid_percent = worker[2] / total_shares
+        text += f"{worker[1]} has {worker[2]} valid shares.\n"
+        text += f"This equals to {'{:2.2f}'.format(valid_percent*100)}% "
+        text += f"and about {'{:.2f}'.format(p.value * counter_value * valid_percent)}€\n\n"
+    send_message_to_group(text)
