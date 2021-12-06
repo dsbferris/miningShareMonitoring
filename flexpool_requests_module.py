@@ -15,7 +15,7 @@ def init():
 
     # REMOVE IF FINISHED
     # if os.environ["PRODUCTION"] == "0":
-        # miner_address = "0xF105D49D387cb84D06EDC9EAC0785eFbBb5a0c67"
+    # miner_address = "0xF105D49D387cb84D06EDC9EAC0785eFbBb5a0c67"
 
 
 def _request_error(url: str, params: dict, fail_count: int, e):
@@ -52,8 +52,18 @@ def get_data_of_workers() -> list[dict]:
 def get_payment_data() -> dict:
     url = api_url + "/miner/payments"
     params = dict(coin="eth", address=miner_address, countervalue="eur", page=0)
-    # TODO Check for more then 1 page. Priority LOW
-    return _make_request(url, params)
+    data: list[dict] = []
+    response = _make_request(url, params)
+    totalPages = response["totalPages"]
+    if totalPages > 1:
+        data += response["data"]
+        for i in range(1, totalPages + 1):
+            params["page"] = i
+            resp = _make_request(url, params)
+            if resp is not None:
+                data.append(resp["data"])
+        response["data"] = data
+    return response
 
 
 def get_balance():

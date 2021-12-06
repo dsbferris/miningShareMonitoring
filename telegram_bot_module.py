@@ -61,8 +61,6 @@ def send_log_to_ferris(relative_log_path: str):
 
 
 def daily_report(daily_data):
-    if os.environ["PRODUCTION"] != 1:
-        return
     text = f"Daily report\n\n"
     if len(daily_data) > 0:
         for d in daily_data:
@@ -71,12 +69,13 @@ def daily_report(daily_data):
                     f"Stale shares: {d[2]}\n" \
                     f"Invalid shares: {d[3]}\n\n"
         text = text.strip()
-        send_message_to_group(text, True)
+        if os.environ["PRODUCTION"] != "1":
+            send_message_to_ferris(text, True)
+        else:
+            send_message_to_group(text, True)
 
 
 def payout_update(p: pc.Payout, counter_value):
-    if os.environ["PRODUCTION"] != 1:
-        return
     text = f"!!! PAYOUT DATA UPDATED !!!\n" \
            f"Current ETH-EUR: {counter_value}€\n" \
            f"Amount: {'{:.6f}'.format(p.value)} ({'{:.2f}'.format(p.value * counter_value)}€)\n" \
@@ -84,12 +83,13 @@ def payout_update(p: pc.Payout, counter_value):
            f"Gas Price: {p.feePrice} Gwei\n" \
            f"Confirmed: {p.confirmed}\n" \
            f"Check on https://etherscan.io/tx/{p.txHash}"
-    send_message_to_group(text)
+    if os.environ["PRODUCTION"] != "1":
+        send_message_to_ferris(text, True)
+    else:
+        send_message_to_group(text)
 
 
 def payout_new(p: pc.Payout, counter_value):
-    if os.environ["PRODUCTION"] != 1:
-        return
     text = f"!!! NEW PAYOUT !!!\n" \
            f"Current ETH-EUR: {counter_value}€\n" \
            f"Amount: {'{:.6f}'.format(p.value)} ({'{:.2f}'.format(p.value * counter_value)}€)\n" \
@@ -97,7 +97,10 @@ def payout_new(p: pc.Payout, counter_value):
            f"Gas Price: {p.feePrice} Gwei\n" \
            f"Confirmed: {p.confirmed}\n" \
            f"Check on https://etherscan.io/tx/{p.txHash}"
-    send_message_to_group(text)
+    if os.environ["PRODUCTION"] != "1":
+        send_message_to_ferris(text, True)
+    else:
+        send_message_to_group(text)
 
 
 def worker_stats_per_payout(worker_stats: list, p: pc.Payout, counter_value: float):
@@ -111,4 +114,7 @@ def worker_stats_per_payout(worker_stats: list, p: pc.Payout, counter_value: flo
         text += f"{worker[1]} has {worker[2]} valid shares.\n"
         text += f"This equals to {'{:2.2f}'.format(valid_percent*100)}% "
         text += f"and about {'{:.2f}'.format(p.value * counter_value * valid_percent)}€\n\n"
-    send_message_to_group(text)
+    if os.environ["PRODUCTION"] != "1":
+        send_message_to_ferris(text, True)
+    else:
+        send_message_to_group(text)

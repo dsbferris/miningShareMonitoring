@@ -52,6 +52,7 @@ def init():
                                 staleShares INTEGER,
                                 invalidShares INTEGER,
                                 hash TEXT,
+                                timestamp TIMESTAMP,
                                 FOREIGN KEY (hash) REFERENCES payouts(hash));'''
     cursor.execute(CREATE_TABLE_SHARES_AT_PAYOUT)
 
@@ -152,8 +153,8 @@ def get_workers_shares_for_payout(txHash: str):
 
 def insert_worker_values_at_payout(p: pc.Payout, counter_value):
     INSERT_WORKER_DATA_AT_PAYOUT = '''INSERT INTO shares_per_payout
-                                        (name, validShares, staleShares, invalidShares, hash) 
-                                        VALUES (?,?,?,?,?);'''
+                                        (name, validShares, staleShares, invalidShares, hash, timestamp) 
+                                        VALUES (?,?,?,?,?,?);'''
     cursor = get_con_cursor()
     workers_shares = get_all_workers_shares()
     for worker in workers_shares:
@@ -161,7 +162,7 @@ def insert_worker_values_at_payout(p: pc.Payout, counter_value):
         valid = worker[1]
         stale = worker[2]
         invalid = worker[3]
-        VALUES = [name, valid, stale, invalid, p.txHash]
+        VALUES = [name, valid, stale, invalid, p.txHash, datetime.datetime.now(de_timezone)]
         cursor.execute(INSERT_WORKER_DATA_AT_PAYOUT, VALUES)
         delete_worker(name)
     con.commit()
