@@ -1,3 +1,4 @@
+import datetime
 import os
 import sys
 import time
@@ -43,6 +44,7 @@ init()
 
 
 def monitor_shares():
+
     worker_data = api.get_data_of_workers()
     db.insert_worker_values(worker_data)
 
@@ -59,8 +61,20 @@ def monitor_flexpool():
     monitor_shares()
     monitor_payouts()
     log.info("See you in 24 hours\n")
-    s.enter(24 * 3600, 1, monitor_flexpool)
+    s.enter(datetime.timedelta(days=1).total_seconds(), 1, monitor_flexpool)
 
 
-s.enter(0, 1, monitor_flexpool)
+last_time_running = db.get_latest_share_datetime()
+if last_time_running is not None:
+    time_diff = datetime.datetime.now(db.de_timezone) - last_time_running
+    one_day_seconds = datetime.timedelta(days=1)
+    wait_diff = one_day_seconds - time_diff
+    wait_seconds = wait_diff.total_seconds()
+    if wait_seconds < 0:
+        s.enter(0, 1, monitor_flexpool)
+    else:
+        print(f"Fetched last values at {last_time_running}.\nWaiting {wait_diff}")
+        s.enter(wait_seconds, 1, monitor_flexpool)
+else:
+    s.enter(0, 1, monitor_flexpool)
 s.run()

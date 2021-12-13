@@ -72,6 +72,21 @@ def init():
 
 # region Worker
 
+def get_latest_share_datetime():
+    TIMESTAMP_COUNT = '''SELECT COUNT(timestamp) FROM shares;'''
+    GET_TIMESTAMP = '''SELECT timestamp FROM shares;'''
+    cursor = get_con_cursor()
+    count = cursor.execute(TIMESTAMP_COUNT).fetchone()[0]
+    if count <= 0:
+        return None
+    else:
+        fetched = cursor.execute(GET_TIMESTAMP).fetchone()[0]
+        format = '%Y-%m-%d %H:%M:%S.%f%z'
+        fixed_date_string = fetched.removesuffix(":00") + "00"
+        s_datetime = datetime.datetime.strptime(fixed_date_string, format)
+        return s_datetime
+
+
 def get_all_workers_shares():
     GET_ALL_WORKERS = '''SELECT * from shares'''
     cursor = get_con_cursor()

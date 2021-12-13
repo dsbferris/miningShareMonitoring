@@ -12,7 +12,7 @@
             </DockerEnvVarImpl>
           </list>
         </option>
-        <option name="commandLineOptions" value="-v datavolume:/app/database" />
+        <option name="commandLineOptions" value="-v datavolume:/app/database --restart unless-stopped" />
         <option name="sourceFilePath" value="Dockerfile" />
       </settings>
     </deployment>
