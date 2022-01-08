@@ -43,13 +43,45 @@ def _make_request(url: str, params: dict, fail_count=0):
     return json.get("result")
 
 
-def get_data_of_workers() -> list[dict]:
+def miner_workers() -> list[dict]:
+    # "result": [
+    #   {
+    #   "name": "Ferris_Phoenix",
+    #   "isOnline": true,
+    #   "count": 1,
+    #   "reportedHashrate": 55381483,
+    #   "currentEffectiveHashrate": 73333333,
+    #   "averageEffectiveHashrate": 56712962.63888889,
+    #   "validShares": 1225,
+    #   "staleShares": 68,
+    #   "invalidShares": 0,
+    #   "lastSeen": 1641658314
+    #   },
+    # ]
     url = api_url + "/miner/workers"
     params = dict(coin="eth", address=miner_address)
     return _make_request(url, params)
 
 
-def get_payment_data() -> dict:
+def miner_payments() -> dict:
+    # "result": {
+    #     "countervalue": 0,
+    #     "totalItems": 0,
+    #     "totalPages": 0,
+    #     "data": [
+    #         {
+    #             "hash": "string",
+    #             "timestamp": 0,
+    #             "value": 0,
+    #             "fee": 0,
+    #             "feePercent": 0,
+    #             "duration": 0,
+    #             "confirmed": true,
+    #             "confirmedTimestamp": 0
+    #         }
+    #     ]
+    # }
+
     url = api_url + "/miner/payments"
     params = dict(coin="eth", address=miner_address, countervalue="eur", page=0)
     data: list[dict] = []
@@ -66,7 +98,25 @@ def get_payment_data() -> dict:
     return response
 
 
-def get_balance():
+def miner_balance() -> int:
+    # "error": null,
+    # "result": {
+    # "balance": 56896143082507970,
+    # "balanceCountervalue": 159.85,
+    # "price": 2809.58
+    # }
     url = api_url + "/miner/balance"
     params = dict(coin="eth", address=miner_address, countervalue="eur")
-    return _make_request(url, params)
+    response = _make_request(url, params)
+    raise NotImplemented
+
+
+def pool_daily_reward_per_gigahash_sec():
+    # {
+    #   "error": null,
+    #   "result": 16617213256156008
+    # }
+    url = api_url + "/pool/dailyRewardPerGigahashSec"
+    params = dict(coin="eth")
+    response = _make_request(url, params)
+    raise NotImplemented

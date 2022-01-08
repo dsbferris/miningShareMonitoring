@@ -4,7 +4,7 @@ import logging as log
 import time
 from zoneinfo import ZoneInfo
 from telegram import Bot
-import payout_class as pc
+from flexpool import my_classes as pc
 
 telegram_bot_api_key: str
 group_chat_id: int
@@ -14,11 +14,15 @@ bot: Bot
 next_send_time: datetime
 
 
-def init():
+def init(api_key: str, groud_id, private_id):
     global telegram_bot_api_key, group_chat_id, private_chat_id, de_timezone, bot, next_send_time
-    telegram_bot_api_key = "API_KEY"
-    group_chat_id = groupChatId
-    private_chat_id = privateChatId
+    telegram_bot_api_key = api_key
+    group_chat_id = groud_id
+    private_chat_id = private_id
+
+    # telegram_bot_api_key = "API_KEY"
+    # group_chat_id = groupChatId
+    # private_chat_id = privateChatId
     de_timezone = ZoneInfo("Europe/Berlin")
     bot = Bot(token=telegram_bot_api_key)
     next_send_time = datetime.now(de_timezone) - timedelta(seconds=5)
@@ -50,14 +54,6 @@ def send_message_to_group(text: str, silent: bool = False):
 
 def send_message_to_ferris(text: str, silent: bool = False):
     send_message(text=text, chat_id=private_chat_id, silent=silent)
-
-
-def send_database_to_ferris(relative_db_path: str):
-    bot.send_document(chat_id=private_chat_id, document=open(relative_db_path, 'rb'))
-
-
-def send_log_to_ferris(relative_log_path: str):
-    bot.send_document(chat_id=private_chat_id, document=open(relative_log_path, 'rb'))
 
 
 def daily_report(daily_data):
@@ -118,3 +114,30 @@ def worker_stats_per_payout(worker_stats: list, p: pc.Payout, counter_value: flo
         send_message_to_ferris(text, True)
     else:
         send_message_to_group(text)
+
+
+# unused
+
+def ripped_from_main_init(sys, db, bot):
+    if sys.argv.__contains__("-sendDatabase"):
+        if not os.path.exists(db.DATA_PATH):
+            log.error("Database file does not exists!")
+        else:
+            bot.send_database_to_ferris(db.DATA_PATH)
+        exit(0)
+
+    if sys.argv.__contains__("-sendLog"):
+        if not os.path.exists("my_log.log"):
+            log.error("Log file does not exists!")
+        else:
+            bot.send_log_to_ferris("my_log.log")
+        exit(0)
+
+
+def send_database_to_ferris(relative_db_path: str):
+    bot.send_document(chat_id=private_chat_id, document=open(relative_db_path, 'rb'))
+
+
+def send_log_to_ferris(relative_log_path: str):
+    bot.send_document(chat_id=private_chat_id, document=open(relative_log_path, 'rb'))
+

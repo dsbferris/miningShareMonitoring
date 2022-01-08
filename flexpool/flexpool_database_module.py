@@ -1,5 +1,4 @@
 import datetime
-import functools
 from zoneinfo import ZoneInfo
 import sqlite3
 import logging as log
@@ -7,9 +6,9 @@ import os
 
 import telegram_bot_module
 import telegram_bot_module as bot
-import payout_class as pc
+from flexpool import my_classes as classes
 
-DATA_DIR = "database"
+DATA_DIR = "../database"
 DATA_NAME = "flexpool_mining.db"
 DATA_PATH = os.path.join(DATA_DIR, DATA_NAME)
 
@@ -112,6 +111,22 @@ def get_last_shares_of_worker(worker: str) -> list:  # (valid, stale, invalid)
     return valid_shares
 
 
+# Hashrate in H/s, payout_limit and currentBalance in wei, not ETH, dailyRewardPerGigaHashSec in wei/ GH/s
+def days_left_for_payout(hashRate: int, dailyRewardPerGigaHashSec: int, payoutLimit: int, currentBalance: int) -> float:
+    # payout in x days (payout limit - <miner/balance>) / daily eth (using <miner/stats> hashrate and <pool/dailyRewardPerGigaHashSec>)
+    # = eth left for payout / daily eth mined by current hashrate
+    # = eth left for payout / current hashrate * dailyRewardPerGigaHashSec
+
+    # dailyRewardPerGigaHashSec = 16617213256156008 wei / 1 GH/s = wei / 1 * 10^9 H/s
+    # miner/stats/currentEffectiveHashrate = 80000000 = 80MH/s
+    # miner/stats/averageEffectiveHashrate = 57361110.791666664 = 57,4MH/s = 57,4 * 10^6 H/s
+    left_for_payout = payoutLimit - currentBalance
+    # pow(10,9) to remove the Giga from dailyRewardPerGigaHashSec
+    daily_wei = (dailyRewardPerGigaHashSec * hashRate) / pow(10, 9)
+    days_left = left_for_payout / daily_wei
+    return days_left
+
+
 def insert_worker_values(worker_data: list[dict]):
     JUST_INSERT_SHARES = '''INSERT INTO shares (name, validShares, staleShares, invalidShares, timestamp)
                             VALUES (?, ?, ?, ?, ?);'''
@@ -142,8 +157,17 @@ def insert_worker_values(worker_data: list[dict]):
     con.commit()
 
     GET_ALL_WORKER_CURRENT_VALUES = '''SELECT * from shares;'''
-    daily_data: list[tuple] = cursor.execute(GET_ALL_WORKER_CURRENT_VALUES).fetchall()
-    bot.daily_report(daily_data)
+    daily_worker_data: list[tuple] = cursor.execute(GET_ALL_WORKER_CURRENT_VALUES).fetchall()
+
+    days_left = days_left_for_payout(
+        hashRate=1234,
+        payoutLimit=1234,
+        currentBalance=1234,
+        dailyRewardPerGigaHashSec=1234)
+
+    # TODO Add Payout in X Days into daily report
+    # TODO Warn worker if offline for 24 hours (aka +0) for max. three times in row
+    bot.daily_report(daily_worker_data)
 
     con.close()
 
@@ -166,7 +190,7 @@ def get_workers_shares_for_payout(txHash: str):
     return fetched
 
 
-def insert_worker_values_at_payout(p: pc.Payout, counter_value):
+def insert_worker_values_at_payout(p: classes.Payout, counter_value):
     INSERT_WORKER_DATA_AT_PAYOUT = '''INSERT INTO shares_per_payout
                                         (name, validShares, staleShares, invalidShares, hash, timestamp) 
                                         VALUES (?,?,?,?,?,?);'''
@@ -193,7 +217,7 @@ def insert_worker_values_at_payout(p: pc.Payout, counter_value):
 # region Payouts
 
 
-def get_payouts() -> list[pc.Payout]:
+def get_payouts() -> list[classes.Payout]:
     GET_PAYOUTS = '''SELECT * from payouts;'''
     cursor = get_con_cursor()
     fetched = cursor.execute(GET_PAYOUTS).fetchall()
@@ -221,15 +245,15 @@ def insert_payouts(payout_data: dict):
     data: list[dict] = payout_data.get("data")
     counter_value: float = payout_data.get("countervalue")
 
-    request_payouts: list[pc.Payout] = []
+    request_payouts: list[classes.Payout] = []
     for payout in data:
-        request_payouts.append(pc.Payout(payout))
+        request_payouts.append(classes.Payout(payout))
 
     db_hashset: list[str] = []
-    db_payouts: list[pc.Payout] = []
+    db_payouts: list[classes.Payout] = []
     tuple_list = get_payouts()
     for t in tuple_list:
-        p = pc.Payout(t)
+        p = classes.Payout(t)
         db_payouts.append(p)
         db_hashset.append(p.txHash)
 
