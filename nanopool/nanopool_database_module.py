@@ -7,7 +7,7 @@ import os
 import telegram_bot_module
 
 
-DATA_PATH = "database"
+DATA_PATH = "../database"
 DATA_NAME = "nanopool_mining.db"
 
 de_timezone = ZoneInfo("Europe/Berlin")
