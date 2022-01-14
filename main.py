@@ -1,43 +1,67 @@
 import datetime
 import os
-import sys
 import time
 import sched
 import logging as log
 import logging_module
-from flexpool import flexpool_database_module as db, flexpool_requests_module as api
+from flexpool import flexpool_database_module as db, flexpool_requests_module as api, my_classes as mc
 import telegram_bot_module as bot
-from flexpool import my_classes as mc
+
 
 s = sched.scheduler(time.time, time.sleep)
-payout_limit_in_wei: int
-
 
 
 def init():
-    global s, payout_limit_in_wei
+    global s
 
     if not os.environ.__contains__("PRODUCTION"):
         os.environ["PRODUCTION"] = "0"  # 0=DEBUG 1=PRODUCTION
 
+    api_key: str = ""
+    if os.environ.__contains__("API_KEY"):
+        api_key = os.environ["API_KEY"]
+
+    private_chat_id: int = 0
+    if os.environ.__contains__("PRIVATE_CHAT_ID"):
+        private_chat_id = int(os.environ["PRIVATE_CHAT_ID"])
+
+    group_chat_id: int = 0
+    if os.environ.__contains__("GROUP_CHAT_ID"):
+        group_chat_id = int(os.environ["GROUP_CHAT_ID"])
+
+    miner_address: str = ""
+    if os.environ.__contains__("MINER_ADDRESS"):
+        miner_address = os.environ["MINER_ADDRESS"]
+
+    payout_limit_eth: float = 0
+    if os.environ.__contains__("PAYOUT_LIMIT_ETH"):
+        payout_limit_eth = float(os.environ["PAYOUT_LIMIT_ETH"])
+
     logging_module.init_logging()
     log.info("Started script")
-    db.init()
-    api.init()
-    bot.init()
-
-    # bot.send_message_to_ferris("Script started", silent=True)
-    payout_limit_in_eth = 0.075
-    payout_limit_in_wei = mc.eth_to_wei(payout_limit_in_eth)
+    payout_limit_wei = mc.eth_to_wei(payout_limit_eth)
+    # TODO DATABASE CONN IS FUCKED UP!
+    db.init(payoutLimit=payout_limit_wei)
+    api.init(address=miner_address)
+    bot.init(api_key=api_key, private_id=private_chat_id, group_id=group_chat_id)
 
 
 init()
 
 
 def monitor_shares():
-
     worker_data = api.miner_workers()
-    db.insert_worker_values(worker_data)
+
+    daily_reward_per_gigahash_sec_wei = api.pool_daily_reward_per_gigahash_sec()
+    current_balance_wei = api.miner_balance_wei()
+    avg_eff_hash = api.miner_average_effective_hashrate()
+
+    db.insert_worker_values(
+        worker_data=worker_data,
+        daily_reward_per_gigahash_sec_wei=daily_reward_per_gigahash_sec_wei,
+        current_balance_wei=current_balance_wei,
+        avg_hashrate=avg_eff_hash
+    )
 
 
 def monitor_payouts():
@@ -45,7 +69,7 @@ def monitor_payouts():
     if payout_data is None:
         log.debug("No payouts yet")
     else:
-        db.insert_payouts(payout_data)
+        db.insert_payouts(payout_data=payout_data)
 
 
 def monitor_flexpool():
@@ -68,4 +92,5 @@ if last_time_running is not None:
         s.enter(wait_seconds, 1, monitor_flexpool)
 else:
     s.enter(0, 1, monitor_flexpool)
+
 s.run()

@@ -6,6 +6,11 @@
     <envs>
       <env name="PYTHONUNBUFFERED" value="1" />
       <env name="PRODUCTION" value="1" />
+      <env name="API_KEY" value="API_KEY" />
+      <env name="PRIVATE_CHAT_ID" value="privateChatId" />
+      <env name="GROUP_CHAT_ID" value="groupChatId" />
+      <env name="MINER_ADDRESS" value="wallet" />
+      <env name="PAYOUT_LIMIT_ETH" value="0.075" />
     </envs>
     <option name="SDK_HOME" value="" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />

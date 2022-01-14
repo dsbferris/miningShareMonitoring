@@ -4,9 +4,8 @@ import logging as log
 import time
 from zoneinfo import ZoneInfo
 from telegram import Bot
-from flexpool import my_classes as pc
+from flexpool import my_classes as mc
 
-telegram_bot_api_key: str
 group_chat_id: int
 private_chat_id: int
 de_timezone: ZoneInfo
@@ -14,17 +13,13 @@ bot: Bot
 next_send_time: datetime
 
 
-def init(api_key: str, groud_id, private_id):
-    global telegram_bot_api_key, group_chat_id, private_chat_id, de_timezone, bot, next_send_time
-    telegram_bot_api_key = api_key
-    group_chat_id = groud_id
+def init(api_key: str, group_id, private_id):
+    global group_chat_id, private_chat_id, de_timezone, bot, next_send_time
+    group_chat_id = group_id
     private_chat_id = private_id
 
-    # telegram_bot_api_key = "API_KEY"
-    # group_chat_id = groupChatId
-    # private_chat_id = privateChatId
     de_timezone = ZoneInfo("Europe/Berlin")
-    bot = Bot(token=telegram_bot_api_key)
+    bot = Bot(token=api_key)
     next_send_time = datetime.now(de_timezone) - timedelta(seconds=5)
 
 
@@ -56,7 +51,7 @@ def send_message_to_ferris(text: str, silent: bool = False):
     send_message(text=text, chat_id=private_chat_id, silent=silent)
 
 
-def daily_report(daily_data):
+def daily_report2(daily_data):
     text = f"Daily report\n\n"
     if len(daily_data) > 0:
         for d in daily_data:
@@ -71,7 +66,14 @@ def daily_report(daily_data):
             send_message_to_group(text, True)
 
 
-def payout_update(p: pc.Payout, counter_value):
+def daily_report(daily_data: mc.DailyReport):
+    if os.environ["PRODUCTION"] != "1":
+        send_message_to_ferris(daily_data.__str__(), True)
+    else:
+        send_message_to_group(daily_data.__str__())
+
+
+def payout_update(p: mc.Payout, counter_value):
     text = f"!!! PAYOUT DATA UPDATED !!!\n" \
            f"Current ETH-EUR: {counter_value}€\n" \
            f"Amount: {'{:.6f}'.format(p.value)} ({'{:.2f}'.format(p.value * counter_value)}€)\n" \
@@ -85,7 +87,7 @@ def payout_update(p: pc.Payout, counter_value):
         send_message_to_group(text)
 
 
-def payout_new(p: pc.Payout, counter_value):
+def payout_new(p: mc.Payout, counter_value):
     text = f"!!! NEW PAYOUT !!!\n" \
            f"Current ETH-EUR: {counter_value}€\n" \
            f"Amount: {'{:.6f}'.format(p.value)} ({'{:.2f}'.format(p.value * counter_value)}€)\n" \
@@ -99,7 +101,7 @@ def payout_new(p: pc.Payout, counter_value):
         send_message_to_group(text)
 
 
-def worker_stats_per_payout(worker_stats: list, p: pc.Payout, counter_value: float):
+def worker_stats_per_payout(worker_stats: list, p: mc.Payout, counter_value: float):
     total_shares = 0
     for worker in worker_stats:
         total_shares += worker[2]
@@ -108,7 +110,7 @@ def worker_stats_per_payout(worker_stats: list, p: pc.Payout, counter_value: flo
     for worker in worker_stats:
         valid_percent = worker[2] / total_shares
         text += f"{worker[1]} has {worker[2]} valid shares.\n"
-        text += f"This equals to {'{:2.2f}'.format(valid_percent*100)}% "
+        text += f"This equals to {'{:2.2f}'.format(valid_percent * 100)}% "
         text += f"and about {'{:.2f}'.format(p.value * counter_value * valid_percent)}€\n\n"
     if os.environ["PRODUCTION"] != "1":
         send_message_to_ferris(text, True)
@@ -140,4 +142,3 @@ def send_database_to_ferris(relative_db_path: str):
 
 def send_log_to_ferris(relative_log_path: str):
     bot.send_document(chat_id=private_chat_id, document=open(relative_log_path, 'rb'))
-

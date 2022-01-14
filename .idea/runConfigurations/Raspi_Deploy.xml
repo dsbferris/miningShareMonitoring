@@ -10,6 +10,26 @@
               <option name="name" value="PRODUCTION" />
               <option name="value" value="0" />
             </DockerEnvVarImpl>
+            <DockerEnvVarImpl>
+              <option name="name" value="API_KEY" />
+              <option name="value" value="API_KEY" />
+            </DockerEnvVarImpl>
+            <DockerEnvVarImpl>
+              <option name="name" value="PRIVATE_CHAT_ID" />
+              <option name="value" value="privateChatId" />
+            </DockerEnvVarImpl>
+            <DockerEnvVarImpl>
+              <option name="name" value="GROUP_CHAT_ID" />
+              <option name="value" value="groupChatId" />
+            </DockerEnvVarImpl>
+            <DockerEnvVarImpl>
+              <option name="name" value="MINER_ADDRESS" />
+              <option name="value" value="wallet" />
+            </DockerEnvVarImpl>
+            <DockerEnvVarImpl>
+              <option name="name" value="PAYOUT_LIMIT_ETH" />
+              <option name="value" value="0.075" />
+            </DockerEnvVarImpl>
           </list>
         </option>
         <option name="commandLineOptions" value="-v datavolume:/app/database --restart unless-stopped" />
