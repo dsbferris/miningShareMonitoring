@@ -8,7 +8,7 @@ import telegram_bot_module
 import telegram_bot_module as bot
 from flexpool import my_classes as mc
 
-DATA_DIR = "../database"
+DATA_DIR = "database"
 DATA_NAME = "flexpool_mining.db"
 DATA_PATH = os.path.join(DATA_DIR, DATA_NAME)
 
@@ -25,7 +25,10 @@ if not os.path.exists(DATA_DIR):
 def get_con_cursor() -> sqlite3.Cursor:
     global con
     if con is None:
-        con = sqlite3.connect(os.path.join(os.getcwd(), DATA_PATH))
+        db_path = os.path.join(os.getcwd(), DATA_PATH)
+        log.debug(f"Try setting con for {db_path}")
+        con = sqlite3.connect(db_path)
+        log.debug("Setup sqlite con")
         return con.cursor()
     else:
         try:
@@ -47,6 +50,7 @@ def init(payoutLimit: int):
                                 invalidShares INTEGER NOT NULL,
                                 timestamp TIMESTAMP);'''
     cursor.execute(CREATE_TABLE_SHARES)
+    log.debug("Created Table Shares")
 
     CREATE_TABLE_SHARES_AT_PAYOUT = '''CREATE TABLE IF NOT EXISTS shares_per_payout(
                                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -58,6 +62,7 @@ def init(payoutLimit: int):
                                 timestamp TIMESTAMP,
                                 FOREIGN KEY (hash) REFERENCES payouts(hash));'''
     cursor.execute(CREATE_TABLE_SHARES_AT_PAYOUT)
+    log.debug("Created Table Shares at Payout")
 
     CREATE_TABLE_PAYOUTS = '''CREATE TABLE IF NOT EXISTS payouts(
                                 timestamp TIMESTAMP,
@@ -70,7 +75,9 @@ def init(payoutLimit: int):
                                 confirmedTimestamp TIMESTAMP,
                                 hash TEXT PRIMARY KEY);'''
     cursor.execute(CREATE_TABLE_PAYOUTS)
+    log.debug("Created Table Payouts")
     con.commit()
+    log.debug("Committed changes to db")
 
 
 # region Worker

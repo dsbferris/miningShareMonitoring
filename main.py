@@ -9,6 +9,7 @@ import telegram_bot_module as bot
 
 
 s = sched.scheduler(time.time, time.sleep)
+logging_module.init_logging()
 
 
 def init():
@@ -37,10 +38,8 @@ def init():
     if os.environ.__contains__("PAYOUT_LIMIT_ETH"):
         payout_limit_eth = float(os.environ["PAYOUT_LIMIT_ETH"])
 
-    logging_module.init_logging()
-    log.info("Started script")
+    log.debug("Fetched all environment variables")
     payout_limit_wei = mc.eth_to_wei(payout_limit_eth)
-    # TODO DATABASE CONN IS FUCKED UP!
     db.init(payoutLimit=payout_limit_wei)
     api.init(address=miner_address)
     bot.init(api_key=api_key, private_id=private_chat_id, group_id=group_chat_id)
