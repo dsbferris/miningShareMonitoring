@@ -13,8 +13,6 @@ logging_module.init_logging()
 
 
 def init():
-    global s
-
     if not os.environ.__contains__("PRODUCTION"):
         os.environ["PRODUCTION"] = "0"  # 0=DEBUG 1=PRODUCTION
 
@@ -37,6 +35,10 @@ def init():
     payout_limit_eth: float = 0
     if os.environ.__contains__("PAYOUT_LIMIT_ETH"):
         payout_limit_eth = float(os.environ["PAYOUT_LIMIT_ETH"])
+
+    if api_key == "" or private_chat_id == 0 or group_chat_id == 0 or miner_address == "" or payout_limit_eth == 0:
+        log.error("Some environment variable was not given!\nExiting")
+        exit(-1)
 
     log.debug("Fetched all environment variables")
     payout_limit_wei = mc.eth_to_wei(payout_limit_eth)
