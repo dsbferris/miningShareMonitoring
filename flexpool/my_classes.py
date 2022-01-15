@@ -87,12 +87,12 @@ class ShareStats:
 class WorkerStats:
     shares: ShareStats
     name: str
-    share_delta: ShareStats
+    delta_shares: ShareStats
 
     def __init__(self, name: str, shares: ShareStats, delta: ShareStats):
         self.shares = shares
         self.name = name
-        self.share_delta = delta
+        self.delta_shares = delta
 
 
 def get_delta_string(number: int) -> str:
@@ -104,20 +104,38 @@ def get_delta_string(number: int) -> str:
         return number.__str__()
 
 
+# Hashrate in H/s, payout_limit and currentBalance in wei, not ETH, dailyRewardPerGigaHashSec in wei/ GH/s
+def days_left_for_payout(hashRate: int, dailyRewardPerGigaHashSec_wei: int,
+                         payoutLimit_wei: int, currentBalance_wei: int) -> float:
+    # payout in x days (payout limit - <miner/balance>) / daily eth (using <miner/stats> hashrate and
+    # <pool/dailyRewardPerGigaHashSec>) = eth left for payout / daily eth mined by current hashrate = eth left for
+    # payout / current hashrate * dailyRewardPerGigaHashSec
+
+    # dailyRewardPerGigaHashSec = 16617213256156008 wei / 1 GH/s = wei / 1 * 10^9 H/s
+    # miner/stats/currentEffectiveHashrate = 80000000 = 80MH/s
+    # miner/stats/averageEffectiveHashrate = 57361110.791666664 = 57,4MH/s = 57,4 * 10^6 H/s
+    left_for_payout = payoutLimit_wei - currentBalance_wei
+    # pow(10,9) to remove the Giga from dailyRewardPerGigaHashSec
+    daily_wei = (dailyRewardPerGigaHashSec_wei * hashRate) / pow(10, 9)
+    days_left = left_for_payout / daily_wei
+    return days_left
+
+
 class DailyReport:
     workers: list[WorkerStats]
-    current_eth: float
-    limit_eth: float
-    percent: float
-    days_left: float
+    current_wei: int
+    limit_wei: int
+    avg_eff_hashrate: int
+    daily_reward_per_gigahash_sec_wei: int
 
-    def __init__(self, workers: list[WorkerStats], current_eth: float, limit_eth: float,
-                 days_left: float):
+    def __init__(self, workers: list[WorkerStats],
+                 current_wei: int, limit_wei: int,
+                 avg_eff_hashrate: int, daily_reward_per_gigahash_sec_wei: int):
         self.workers = workers
-        self.current_eth = current_eth
-        self.limit_eth = limit_eth
-        self.percent = current_eth / limit_eth
-        self.days_left = days_left
+        self.current_wei = current_wei
+        self.limit_wei = limit_wei
+        self.avg_eff_hashrate = avg_eff_hashrate
+        self.daily_reward_per_gigahash_sec_wei = daily_reward_per_gigahash_sec_wei
 
     def __str__(self):
         text = f"Daily mining report\n\n"
@@ -125,14 +143,16 @@ class DailyReport:
         if len(self.workers) > 0:
             for d in self.workers:
                 text += f"Name: {d.name}\n" \
-                        f"Valid shares: {d.shares.valid} ({get_delta_string(d.share_delta.valid)})\n" \
-                        f"Stale shares: {d.shares.stale} ({get_delta_string(d.share_delta.stale)})\n" \
-                        f"Invalid shares: {d.shares.invalid} ({get_delta_string(d.share_delta.invalid)})\n\n"
+                        f"Valid shares: {d.shares.valid} ({get_delta_string(d.delta_shares.valid)})\n" \
+                        f"Stale shares: {d.shares.stale} ({get_delta_string(d.delta_shares.stale)})\n" \
+                        f"Invalid shares: {d.shares.invalid} ({get_delta_string(d.delta_shares.invalid)})\n\n"
 
-        text += f"{'{:.6f}'.format(self.current_eth)} ETH of {'{:.6f}'.format(self.limit_eth)} ETH " \
-                f"({'{:.2f}'.format(self.percent * 100)} %)\n"
-        text += f"{'{:.1f}'.format(self.days_left)} days left to payout"
-        text = text.strip()
+        text += f"{'{:.6f}'.format(wei_to_eth(self.current_wei))} ETH of {'{:.6f}'.format(wei_to_eth(self.limit_wei))} ETH " \
+                f"({'{:.2f}'.format((self.current_wei / self.limit_wei) * 100)} %)\n"
+        days_left = days_left_for_payout(hashRate=self.avg_eff_hashrate,
+                                         payoutLimit_wei=self.limit_wei, currentBalance_wei=self.current_wei,
+                                         dailyRewardPerGigaHashSec_wei=self.daily_reward_per_gigahash_sec_wei)
+        text += f"{'{:.1f}'.format(days_left)} days left to payout"
         return text
 
 
@@ -153,8 +173,8 @@ def daily_sample(mc):
 
     daily: mc.DailyReport = mc.DailyReport(
         workers=worker_list,
-        limit_eth=limit_eth,
-        current_eth=current_eth,
+        limit_wei=limit_eth,
+        current_wei=current_eth,
         days_left=18.9
     )
     daily_string = str(daily)

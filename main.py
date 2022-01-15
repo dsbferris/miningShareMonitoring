@@ -55,14 +55,17 @@ def monitor_shares():
 
     daily_reward_per_gigahash_sec_wei = api.pool_daily_reward_per_gigahash_sec()
     current_balance_wei = api.miner_balance_wei()
-    avg_eff_hash = api.miner_average_effective_hashrate()
+    avg_eff_hash = int(api.miner_average_effective_hashrate())
 
-    db.insert_worker_values(
-        worker_data=worker_data,
-        daily_reward_per_gigahash_sec_wei=daily_reward_per_gigahash_sec_wei,
-        current_balance_wei=current_balance_wei,
-        avg_hashrate=avg_eff_hash
+    daily: mc.DailyReport = mc.DailyReport(
+        workers=worker_data,
+        current_wei=current_balance_wei,
+        limit_wei=db.payout_limit_wei,
+        avg_eff_hashrate=avg_eff_hash,
+        daily_reward_per_gigahash_sec_wei=daily_reward_per_gigahash_sec_wei
     )
+
+    db.insert_worker_values(daily)
 
 
 def monitor_payouts():

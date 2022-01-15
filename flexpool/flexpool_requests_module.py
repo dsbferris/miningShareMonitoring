@@ -40,26 +40,6 @@ def _make_request(url: str, params: dict, fail_count=0):
     return json.get("result")
 
 
-def miner_workers2() -> list[dict]:
-    # "result": [
-    #   {
-    #   "name": "Ferris_Phoenix",
-    #   "isOnline": true,
-    #   "count": 1,
-    #   "reportedHashrate": 55381483,
-    #   "currentEffectiveHashrate": 73333333,
-    #   "averageEffectiveHashrate": 56712962.63888889,
-    #   "validShares": 1225,
-    #   "staleShares": 68,
-    #   "invalidShares": 0,
-    #   "lastSeen": 1641658314
-    #   },
-    # ]
-    url = api_url + "/miner/workers"
-    params = dict(coin="eth", address=miner_address)
-    return _make_request(url, params)
-
-
 def miner_workers() -> list[mc.WorkerStats]:
     # "result": [
     #   {
@@ -80,37 +60,46 @@ def miner_workers() -> list[mc.WorkerStats]:
     response = _make_request(url, params)
     workers_stats: list[mc.WorkerStats] = []
     for r in response:
-        workers_stats.append(
-            mc.WorkerStats(name=r["name"],
-                           delta=mc.ShareStats(
-                               valid=r["validShares"],
-                               stale=r["staleShares"],
-                               invalid=r["invalidShares"]),
-                           shares=None
-                           )
-        )
+        w = mc.WorkerStats(name=r["name"], delta=mc.ShareStats(
+                            valid=r["validShares"],
+                            stale=r["staleShares"],
+                            invalid=r["invalidShares"]),
+                           shares=None)
+        workers_stats.append(w)
 
     return workers_stats
 
 
 def miner_payments() -> dict:
-    # "result": {
-    #     "countervalue": 0,
-    #     "totalItems": 0,
-    #     "totalPages": 0,
+    # "countervalue": 2912.23,
     #     "data": [
-    #         {
-    #             "hash": "string",
-    #             "timestamp": 0,
-    #             "value": 0,
-    #             "fee": 0,
-    #             "feePercent": 0,
-    #             "duration": 0,
-    #             "confirmed": true,
-    #             "confirmedTimestamp": 0
-    #         }
-    #     ]
-    # }
+    #       {
+    #         "hash": "***REMOVED***",
+    #         "timestamp": 1638897913,
+    #         "value": 48193333093397850,
+    #         "fee": 1838904407907000,
+    #         "feePercent": 0.036754390763735906,
+    #         "feePrice": 87,
+    #         "duration": 2138789,
+    #         "confirmed": true,
+    #         "confirmedTimestamp": 1638897956,
+    #         "network": "mainnet"
+    #       },
+    #       {
+    #         "hash": "***REMOVED***",
+    #         "timestamp": 1636759124,
+    #         "value": 53158198134477620,
+    #         "fee": 1811723853282000,
+    #         "feePercent": 0.03295845778506697,
+    #         "feePrice": 86,
+    #         "duration": 2204924,
+    #         "confirmed": true,
+    #         "confirmedTimestamp": 1636760934,
+    #         "network": "mainnet"
+    #       }
+    #     ],
+    #     "totalItems": 2,
+    #     "totalPages": 1
 
     url = api_url + "/miner/payments"
     params = dict(coin="eth", address=miner_address, countervalue="eur", page=0)
@@ -129,6 +118,12 @@ def miner_payments() -> dict:
 
 
 def miner_average_effective_hashrate() -> int:
+    # "averageEffectiveHashrate": 145925925.0625,
+    # "currentEffectiveHashrate": 153333332,
+    # "invalidShares": 0,
+    # "reportedHashrate": 179703474,
+    # "staleShares": 47,
+    # "validShares": 3152
     url = api_url + "/miner/stats"
     params = dict(coin="eth", address=miner_address)
     response = _make_request(url, params)
@@ -136,12 +131,9 @@ def miner_average_effective_hashrate() -> int:
 
 
 def miner_balance_wei():
-    # "error": null,
-    # "result": {
-    # "balance": 56896143082507970,
-    # "balanceCountervalue": 159.85,
-    # "price": 2809.58
-    # }
+    # "balance": 68736199578713790,
+    # "balanceCountervalue": 200.18,
+    # "price": 2912.23
     url = api_url + "/miner/balance"
     params = dict(coin="eth", address=miner_address, countervalue="eur")
     response = _make_request(url, params)
@@ -149,10 +141,7 @@ def miner_balance_wei():
 
 
 def pool_daily_reward_per_gigahash_sec() -> int:
-    # {
-    #   "error": null,
-    #   "result": 16617213256156008
-    # }
+    # "result": 16617213256156008
     url = api_url + "/pool/dailyRewardPerGigahashSec"
     params = dict(coin="eth")
     response: int = _make_request(url, params)

@@ -104,42 +104,56 @@ def get_all_workers_shares():
     return fetched
 
 
-def get_last_shares_of_worker(worker: str) -> list:  # (valid, stale, invalid)
+def get_last_shares_of_worker(worker: str) -> mc.ShareStats:  # (valid, stale, invalid)
     cursor = get_con_cursor()
     GET_SHARES = '''SELECT validShares, staleShares, invalidShares FROM shares WHERE name=? ORDER BY timestamp DESC;'''
 
     GET_COUNT_OF_VALID_SHARES = '''SELECT COUNT(validShares) FROM shares WHERE name=?;'''
 
     log.debug(f"Try reading previous valid shares of {worker}")
-    valid_shares = None
+    shares: mc.ShareStats = None
     count = cursor.execute(GET_COUNT_OF_VALID_SHARES, [worker]).fetchone()[0]
     if count > 0:
-        valid_shares = cursor.execute(GET_SHARES, [worker]).fetchone()  # needs array, else error...
-        valid_shares = list(valid_shares)
-        log.debug(f"Fetched previous valid shares: {valid_shares}")
+        shares = cursor.execute(GET_SHARES, [worker]).fetchone()  # needs array, else error...
+        shares = list(shares)
+        log.debug(f"Fetched previous valid shares: {shares}")
+        shares = mc.ShareStats(shares[0], shares[1], shares[2])
     else:
         log.debug("Worker had no previous valid shares")
-    return valid_shares
+    return shares
 
 
-# Hashrate in H/s, payout_limit and currentBalance in wei, not ETH, dailyRewardPerGigaHashSec in wei/ GH/s
-def days_left_for_payout(hashRate: int, dailyRewardPerGigaHashSec_wei: int,
-                         payoutLimit_wei: int, currentBalance_wei: int) -> float:
-    # payout in x days (payout limit - <miner/balance>) / daily eth (using <miner/stats> hashrate and
-    # <pool/dailyRewardPerGigaHashSec>) = eth left for payout / daily eth mined by current hashrate = eth left for
-    # payout / current hashrate * dailyRewardPerGigaHashSec
+def insert_worker_values(daily: mc.DailyReport):
+    JUST_INSERT_SHARES = '''INSERT INTO shares (name, validShares, staleShares, invalidShares, timestamp)
+                            VALUES (?, ?, ?, ?, ?);'''
+    ADD_UP_SHARES = '''UPDATE shares SET 
+                        validShares=?, staleShares=?, invalidShares=?, timestamp=? 
+                        WHERE name=?'''
 
-    # dailyRewardPerGigaHashSec = 16617213256156008 wei / 1 GH/s = wei / 1 * 10^9 H/s
-    # miner/stats/currentEffectiveHashrate = 80000000 = 80MH/s
-    # miner/stats/averageEffectiveHashrate = 57361110.791666664 = 57,4MH/s = 57,4 * 10^6 H/s
-    left_for_payout = payoutLimit_wei - currentBalance_wei
-    # pow(10,9) to remove the Giga from dailyRewardPerGigaHashSec
-    daily_wei = (dailyRewardPerGigaHashSec_wei * hashRate) / pow(10, 9)
-    days_left = left_for_payout / daily_wei
-    return days_left
+    cursor = get_con_cursor()
+    timestamp = datetime.datetime.now(de_timezone)
+    for worker in daily.workers:
+        previous = get_last_shares_of_worker(worker.name)
+        if previous is None:
+            VALUES = [worker.name] + [worker.delta_shares.valid, worker.delta_shares.stale, worker.delta_shares.invalid] + [timestamp]
+            cursor.execute(JUST_INSERT_SHARES, VALUES)
+        else:
+            # new_actual = []
+            # for i in range(0, len(previous)):
+            # new_actual += [actual[i] + previous[i]]
+
+            worker.shares = worker.delta_shares + previous
+            VALUES = [worker.shares.valid, worker.shares.stale, worker.shares.invalid] + [timestamp, worker.name]
+            cursor.execute(ADD_UP_SHARES, VALUES)
+        log.info(f"Inserted worker values: {VALUES}")
+    con.commit()
+
+    bot.daily_report(daily)
+
+    con.close()
 
 
-def insert_worker_values(worker_data: list[mc.WorkerStats], daily_reward_per_gigahash_sec_wei: int, current_balance_wei: int, avg_hashrate: int):
+def insert_worker_values2(worker_data: list[mc.WorkerStats], daily_reward_per_gigahash_sec_wei: int, current_balance_wei: int, avg_hashrate: int):
     JUST_INSERT_SHARES = '''INSERT INTO shares (name, validShares, staleShares, invalidShares, timestamp)
                             VALUES (?, ?, ?, ?, ?);'''
     ADD_UP_SHARES = '''UPDATE shares SET 
@@ -150,7 +164,7 @@ def insert_worker_values(worker_data: list[mc.WorkerStats], daily_reward_per_gig
     timestamp = datetime.datetime.now(de_timezone)
     for worker in worker_data:
         previous = get_last_shares_of_worker(worker.name)
-        actual = [worker.share_delta.valid, worker.share_delta.stale, worker.share_delta.invalid]
+        actual = [worker.delta_shares.valid, worker.delta_shares.stale, worker.delta_shares.invalid]
         if previous is None:
             VALUES = [worker.name] + actual + [timestamp]
             cursor.execute(JUST_INSERT_SHARES, VALUES)
@@ -174,7 +188,7 @@ def insert_worker_values(worker_data: list[mc.WorkerStats], daily_reward_per_gig
 
     # TODO Add Payout in X Days into daily report
     # TODO Warn worker if offline for 24 hours (aka +0) for max. three times in row
-    daily = mc.DailyReport(limit_eth=mc.wei_to_eth(payout_limit_wei), current_eth=mc.wei_to_eth(current_balance_wei),
+    daily = mc.DailyReport(limit_wei=mc.wei_to_eth(payout_limit_wei), current_wei=mc.wei_to_eth(current_balance_wei),
                            days_left=days_left, workers=[])
     bot.daily_report(daily)
 
