@@ -51,7 +51,7 @@ def send_message_to_ferris(text: str, silent: bool = False):
     send_message(text=text, chat_id=private_chat_id, silent=silent)
 
 
-def daily_report2(daily_data):
+def daily_report_old(daily_data):
     text = f"Daily report\n\n"
     if len(daily_data) > 0:
         for d in daily_data:
@@ -67,6 +67,7 @@ def daily_report2(daily_data):
 
 
 def daily_report(daily_data: mc.DailyReport):
+    log.debug("Sending DAILY\n" + daily_data.__str__())
     if os.environ["PRODUCTION"] != "1":
         send_message_to_ferris(daily_data.__str__(), True)
     else:
@@ -81,6 +82,7 @@ def payout_update(p: mc.Payout, counter_value):
            f"Gas Price: {p.feePrice} Gwei\n" \
            f"Confirmed: {p.confirmed}\n" \
            f"Check on https://etherscan.io/tx/{p.txHash}"
+    log.debug("Sending PAYOUT_UPDATE message\n" + text)
     if os.environ["PRODUCTION"] != "1":
         send_message_to_ferris(text, True)
     else:
@@ -95,6 +97,7 @@ def payout_new(p: mc.Payout, counter_value):
            f"Gas Price: {p.feePrice} Gwei\n" \
            f"Confirmed: {p.confirmed}\n" \
            f"Check on https://etherscan.io/tx/{p.txHash}"
+    log.debug("Sending PAYOUT_NEW message\n" + text)
     if os.environ["PRODUCTION"] != "1":
         send_message_to_ferris(text, True)
     else:
@@ -112,6 +115,7 @@ def worker_stats_per_payout(worker_stats: list, p: mc.Payout, counter_value: flo
         text += f"{worker[1]} has {worker[2]} valid shares.\n"
         text += f"This equals to {'{:2.2f}'.format(valid_percent * 100)}% "
         text += f"and about {'{:.2f}'.format(p.value * counter_value * valid_percent)}€\n\n"
+    log.debug("Sending WORKER_STATS_PER_PAYOUT message\n" + text)
     if os.environ["PRODUCTION"] != "1":
         send_message_to_ferris(text, True)
     else:

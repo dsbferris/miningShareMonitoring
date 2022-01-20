@@ -5,6 +5,7 @@ RUN pip install --upgrade pip
 
 WORKDIR /app
 COPY *.py /app/
+COPY flexpool/*.py /app/flexpool/
 COPY requirements.txt /app/
 # COPY . /app
 

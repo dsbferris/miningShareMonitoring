@@ -8,6 +8,9 @@ from flexpool import flexpool_database_module as db, flexpool_requests_module as
 import telegram_bot_module as bot
 
 
+# TODO WRITE TESTS!!! ONLY WAY TO VERIFY PRODUCTION BUILD ARE REALLY WORKING CORRECT!
+
+
 s = sched.scheduler(time.time, time.sleep)
 logging_module.init_logging()
 

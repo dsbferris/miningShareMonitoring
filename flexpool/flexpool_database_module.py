@@ -26,9 +26,9 @@ def get_con_cursor() -> sqlite3.Cursor:
     global con
     if con is None:
         db_path = os.path.join(os.getcwd(), DATA_PATH)
-        log.debug(f"Try setting con for {db_path}")
+        log.debug(f"Try setting db_connection for {db_path}")
         con = sqlite3.connect(db_path)
-        log.debug("Setup sqlite con")
+        log.debug("Setup sqlite db_connection")
         return con.cursor()
     else:
         try:
@@ -77,7 +77,7 @@ def init(payoutLimit: int):
     cursor.execute(CREATE_TABLE_PAYOUTS)
     log.debug("Created Table Payouts")
     con.commit()
-    log.debug("Committed changes to db")
+    log.debug("Committed changes to db_connection")
 
 
 # region Worker
@@ -110,21 +110,21 @@ def get_last_shares_of_worker(worker: str) -> mc.ShareStats:  # (valid, stale, i
 
     GET_COUNT_OF_VALID_SHARES = '''SELECT COUNT(validShares) FROM shares WHERE name=?;'''
 
-    log.debug(f"Try reading previous valid shares of {worker}")
-    shares: mc.ShareStats = None
+    log.debug(f"Try reading previous listing of {worker}")
     count = cursor.execute(GET_COUNT_OF_VALID_SHARES, [worker]).fetchone()[0]
     if count > 0:
         shares = cursor.execute(GET_SHARES, [worker]).fetchone()  # needs array, else error...
-        shares = list(shares)
+        # shares = list(shares)
         log.debug(f"Fetched previous valid shares: {shares}")
-        shares = mc.ShareStats(shares[0], shares[1], shares[2])
+        shares: mc.ShareStats = mc.ShareStats(shares[0], shares[1], shares[2])
     else:
-        log.debug("Worker had no previous valid shares")
+        shares: mc.ShareStats = mc.ShareStats(0, 0, 0)
+        log.debug(f"{worker} is not listed. Returning (0, 0, 0)")
     return shares
 
 
 def insert_worker_values(daily: mc.DailyReport):
-    JUST_INSERT_SHARES = '''INSERT INTO shares (name, validShares, staleShares, invalidShares, timestamp)
+    JUST_INSERT_SHARES = '''REPLACE INTO shares (name, validShares, staleShares, invalidShares, timestamp)
                             VALUES (?, ?, ?, ?, ?);'''
     ADD_UP_SHARES = '''UPDATE shares SET 
                         validShares=?, staleShares=?, invalidShares=?, timestamp=? 
@@ -134,26 +134,19 @@ def insert_worker_values(daily: mc.DailyReport):
     timestamp = datetime.datetime.now(de_timezone)
     for worker in daily.workers:
         previous = get_last_shares_of_worker(worker.name)
-        if previous is None:
-            VALUES = [worker.name] + [worker.delta_shares.valid, worker.delta_shares.stale, worker.delta_shares.invalid] + [timestamp]
-            cursor.execute(JUST_INSERT_SHARES, VALUES)
-        else:
-            # new_actual = []
-            # for i in range(0, len(previous)):
-            # new_actual += [actual[i] + previous[i]]
-
-            worker.shares = worker.delta_shares + previous
-            VALUES = [worker.shares.valid, worker.shares.stale, worker.shares.invalid] + [timestamp, worker.name]
-            cursor.execute(ADD_UP_SHARES, VALUES)
+        worker.shares = worker.delta_shares + previous
+        VALUES = [worker.name] + [worker.delta_shares.valid, worker.delta_shares.stale, worker.delta_shares.invalid] + [
+            timestamp]
+        # VALUES = [worker.shares.valid, worker.shares.stale, worker.shares.invalid] + [timestamp, worker.name]
+        cursor.execute(JUST_INSERT_SHARES, VALUES)
         log.info(f"Inserted worker values: {VALUES}")
     con.commit()
 
     bot.daily_report(daily)
 
-    con.close()
 
-
-def insert_worker_values2(worker_data: list[mc.WorkerStats], daily_reward_per_gigahash_sec_wei: int, current_balance_wei: int, avg_hashrate: int):
+def insert_worker_values_old(worker_data: list[mc.WorkerStats], daily_reward_per_gigahash_sec_wei: int,
+                             current_balance_wei: int, avg_hashrate: int):
     JUST_INSERT_SHARES = '''INSERT INTO shares (name, validShares, staleShares, invalidShares, timestamp)
                             VALUES (?, ?, ?, ?, ?);'''
     ADD_UP_SHARES = '''UPDATE shares SET 
@@ -243,8 +236,8 @@ def insert_worker_values_at_payout(p: mc.Payout, counter_value):
 def get_payouts() -> list[mc.Payout]:
     GET_PAYOUTS = '''SELECT * from payouts;'''
     cursor = get_con_cursor()
+    log.debug("Fetching previous PAYOUTS")
     fetched = cursor.execute(GET_PAYOUTS).fetchall()
-    print(fetched)
     return fetched
 
 
@@ -268,38 +261,44 @@ def insert_payouts(payout_data: dict):
     data: list[dict] = payout_data.get("data")
     counter_value: float = payout_data.get("countervalue")
 
-    request_payouts: list[mc.Payout] = []
+    # create payout class out of json dict
+    api_response_payouts: list[mc.Payout] = []
     for payout in data:
-        request_payouts.append(mc.Payout(payout))
+        api_response_payouts.append(mc.Payout(payout))
 
+    # filtering out new payouts
     db_hashset: list[str] = []
     db_payouts: list[mc.Payout] = []
-    tuple_list = get_payouts()
-    for t in tuple_list:
+    tuple_list_of_payouts = get_payouts()
+    for t in tuple_list_of_payouts:
         p = mc.Payout(t)
         db_payouts.append(p)
         db_hashset.append(p.txHash)
 
-    new_payouts = request_payouts
+    # check for any changes or new payouts and add then to list
+    changed_or_new_payouts: list[mc.Payout] = []  # = api_response_payouts
     for db in db_payouts:
-        for req in request_payouts:
-            if db == req:
-                new_payouts.remove(db)
+        for req in api_response_payouts:
+            if db.txHash == req.txHash:
+                changed_or_new_payouts.append(db)
                 break
 
-    if len(new_payouts) > 0:
-        for p in new_payouts:
+    # let's keep this if else for debug message. But could be removed
+    if len(changed_or_new_payouts) > 0:
+        for p in changed_or_new_payouts:
+            # is contained so something changed
             if db_hashset.__contains__(p.txHash):
                 cursor.execute(UPDATE_PAYOUT, p.__iter__())
                 bot.payout_update(p, counter_value)
+                log.debug("PAYOUT UPDATE")
+            # is new
             else:
                 cursor.execute(JUST_INSERT_PAYOUT, p.__iter__())
                 bot.payout_new(p, counter_value)
                 insert_worker_values_at_payout(p, counter_value)
-
+                log.debug("NEW PAYOUT")
         con.commit()
     else:
         log.info("No new payouts")
-    con.close()
 
 # endregion

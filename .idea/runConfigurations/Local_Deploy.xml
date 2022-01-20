@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Local Deploy" type="docker-deploy" factoryName="dockerfile" server-name="Docker">
+  <configuration default="false" name="Local Deploy" type="docker-deploy" factoryName="dockerfile" server-name="Localhost Docker">
     <deployment type="dockerfile">
       <settings>
         <option name="imageTag" value="mmi" />
