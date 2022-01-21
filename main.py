@@ -95,7 +95,8 @@ if last_time_running is not None:
     if wait_seconds < 0:
         s.enter(0, 1, monitor_flexpool)
     else:
-        print(f"Fetched last values at {last_time_running}.\nWaiting {wait_diff}")
+        log.debug(f"Fetched last values at {last_time_running}.")
+        log.debug(f"Waiting {wait_diff}")
         s.enter(wait_seconds, 1, monitor_flexpool)
 else:
     s.enter(0, 1, monitor_flexpool)
