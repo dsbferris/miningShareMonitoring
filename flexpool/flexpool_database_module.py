@@ -223,10 +223,6 @@ def insert_worker_values_at_payout(p: mc.Payout, counter_value):
     con.commit()
     stats = get_workers_shares_for_payout(p.txHash)
     telegram_bot_module.worker_stats_per_payout(stats, p, counter_value)
-    # TODO CONTINUE HERE!
-    pass
-    pass
-
 
 # endregion
 
@@ -242,7 +238,7 @@ def get_payouts() -> list[mc.Payout]:
 
 
 def insert_payouts(payout_data: dict):
-    JUST_INSERT_PAYOUT = '''INSERT INTO payouts 
+    INSERT_OR_REPLACE_PAYOUT = '''REPLACE INTO payouts 
                         (timestamp, value, fee, feePercent, feePrice, duration, confirmed, confirmedTimestamp, hash) 
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);'''
 
@@ -262,43 +258,33 @@ def insert_payouts(payout_data: dict):
     counter_value: float = payout_data.get("countervalue")
 
     # create payout class out of json dict
-    api_response_payouts: list[mc.Payout] = []
+    api_payouts: list[mc.Payout] = []
     for payout in data:
-        api_response_payouts.append(mc.Payout(payout))
+        api_payouts.append(mc.Payout(payout))
 
-    # filtering out new payouts
-    db_hashset: list[str] = []
-    db_payouts: list[mc.Payout] = []
-    tuple_list_of_payouts = get_payouts()
-    for t in tuple_list_of_payouts:
-        p = mc.Payout(t)
-        db_payouts.append(p)
-        db_hashset.append(p.txHash)
+    # get payouts from db
+    recorded_payouts = get_payouts()
+    # create list that contains already known payouts
+    matched_payouts_both_contain: list[mc.Payout] = []
+    for api_payout in api_payouts:
+        for db_payout in recorded_payouts:
+            if api_payout.txHash == db_payout.txHash:
+                if api_payout.__eq__(db_payout):
+                    matched_payouts_both_contain.append(api_payout)
+                    break
 
-    # check for any changes or new payouts and add then to list
-    changed_or_new_payouts: list[mc.Payout] = []  # = api_response_payouts
-    for db in db_payouts:
-        for req in api_response_payouts:
-            if db.txHash == req.txHash:
-                changed_or_new_payouts.append(db)
-                break
-
-    # let's keep this if else for debug message. But could be removed
-    if len(changed_or_new_payouts) > 0:
-        for p in changed_or_new_payouts:
-            # is contained so something changed
-            if db_hashset.__contains__(p.txHash):
-                cursor.execute(UPDATE_PAYOUT, p.__iter__())
-                bot.payout_update(p, counter_value)
-                log.debug("PAYOUT UPDATE")
-            # is new
-            else:
-                cursor.execute(JUST_INSERT_PAYOUT, p.__iter__())
-                bot.payout_new(p, counter_value)
-                insert_worker_values_at_payout(p, counter_value)
-                log.debug("NEW PAYOUT")
-        con.commit()
+    for matched_payout in matched_payouts_both_contain:
+        api_payouts.remove(matched_payout)
+    # TODO SHIT IS NOT WRITING PAYOUTS INTO DATABASE. CHECK ON THIS!
+    if len(api_payouts) > 0:
+        for api_payout in api_payouts:
+            cursor.execute(INSERT_OR_REPLACE_PAYOUT, api_payout.__iter__())
+            con.commit()
+            bot.payout_new(api_payout, counter_value)
+            insert_worker_values_at_payout(api_payout, counter_value)
+            log.debug("NEW PAYOUT")
     else:
-        log.info("No new payouts")
+        log.debug("No new Payout.")
+    # BELOW HERE IS OLD CODE
 
 # endregion
