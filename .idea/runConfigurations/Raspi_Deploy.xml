@@ -3,6 +3,14 @@
     <deployment type="dockerfile">
       <settings>
         <option name="imageTag" value="mmi" />
+        <option name="buildArgs">
+          <list>
+            <DockerEnvVarImpl>
+              <option name="name" value="--rm" />
+              <option name="value" value="true" />
+            </DockerEnvVarImpl>
+          </list>
+        </option>
         <option name="containerName" value="mmc" />
         <option name="envVars">
           <list>

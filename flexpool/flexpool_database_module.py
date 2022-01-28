@@ -234,24 +234,16 @@ def get_payouts() -> list[mc.Payout]:
     cursor = get_con_cursor()
     log.debug("Fetching previous PAYOUTS")
     fetched = cursor.execute(GET_PAYOUTS).fetchall()
-    return fetched
+    payouts: list[mc.Payout] = []
+    for f in fetched:
+        payouts.append(mc.Payout(f))
+    return payouts
 
 
 def insert_payouts(payout_data: dict):
     INSERT_OR_REPLACE_PAYOUT = '''REPLACE INTO payouts 
                         (timestamp, value, fee, feePercent, feePrice, duration, confirmed, confirmedTimestamp, hash) 
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);'''
-
-    UPDATE_PAYOUT = '''UPDATE payouts SET
-                        timestamp=?,
-                        value=?,
-                        fee=?,
-                        feePercent=?,
-                        feePrice=?,
-                        duration=?,
-                        confirmed=?,
-                        confirmedTimestamp=?
-                        WHERE hash=?;'''
 
     cursor = get_con_cursor()
     data: list[dict] = payout_data.get("data")
@@ -263,28 +255,33 @@ def insert_payouts(payout_data: dict):
         api_payouts.append(mc.Payout(payout))
 
     # get payouts from db
-    recorded_payouts = get_payouts()
+    db_payouts = get_payouts()
     # create list that contains already known payouts
-    matched_payouts_both_contain: list[mc.Payout] = []
-    for api_payout in api_payouts:
-        for db_payout in recorded_payouts:
-            if api_payout.txHash == db_payout.txHash:
-                if api_payout.__eq__(db_payout):
-                    matched_payouts_both_contain.append(api_payout)
-                    break
+    if len(db_payouts) > 0:
+        matched_payouts_in_db_and_api: list[mc.Payout] = []
+        for api_payout in api_payouts:
+            for db_payout in db_payouts:
+                if api_payout.txHash == db_payout.txHash:
+                    if api_payout.txHash.__eq__(db_payout.txHash):
+                        matched_payouts_in_db_and_api.append(api_payout)
+                        break
 
-    for matched_payout in matched_payouts_both_contain:
-        api_payouts.remove(matched_payout)
-    # TODO SHIT IS NOT WRITING PAYOUTS INTO DATABASE. CHECK ON THIS!
+        for matched_payout in matched_payouts_in_db_and_api:
+            api_payouts.remove(matched_payout)
+
     if len(api_payouts) > 0:
         for api_payout in api_payouts:
-            cursor.execute(INSERT_OR_REPLACE_PAYOUT, api_payout.__iter__())
+            VALUE = api_payout.__iter__()
+            cursor.execute(INSERT_OR_REPLACE_PAYOUT, VALUE)
             con.commit()
-            bot.payout_new(api_payout, counter_value)
-            insert_worker_values_at_payout(api_payout, counter_value)
-            log.debug("NEW PAYOUT")
+            log.debug("Written payout into db.")
+            if len(api_payouts) == 1:
+                bot.payout_new(api_payout, counter_value)
+                insert_worker_values_at_payout(api_payout, counter_value)
+                log.debug("NEW PAYOUT WITH MESSAGE")
+            else:
+                log.debug("NEW PAYOUT BUT NO MESSAGE CUZ IT IS FIRST RUN OF PROGRAM")
     else:
         log.debug("No new Payout.")
-    # BELOW HERE IS OLD CODE
 
 # endregion
