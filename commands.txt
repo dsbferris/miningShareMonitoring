@@ -5,7 +5,7 @@ docker save -o C:\Users\Ferris\Downloads\mmi.tar mmi
 
 
 
-sftp ***REMOVED***@***REMOVED***
+sftp user@server
 put C:\Users\Ferris\Downloads\mmi-alpine.tar.gz mm/mmi-alpine.tar.gz
 
 docker load -i mmi.tar.gz
@@ -16,8 +16,8 @@ sudo usermod -a -G docker $USER
 
 #Get Database
 cd C:\Users\Ferris\Downloads
-sftp root@***REMOVED***
-cd /mnt/***REMOVED***_userdata/docker-data/volumes/datavolume/_data
+sftp user@server
+cd /mnt/dietpi_userdata/docker-data/volumes/datavolume/_data
 get nanopool_mining.db
 
 
