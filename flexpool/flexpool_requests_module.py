@@ -74,7 +74,7 @@ def miner_payments() -> dict:
     # "countervalue": 2912.23,
     #     "data": [
     #       {
-    #         "hash": "***REMOVED***",
+    #         "hash": "",
     #         "timestamp": 1638897913,
     #         "value": 48193333093397850,
     #         "fee": 1838904407907000,
@@ -86,7 +86,7 @@ def miner_payments() -> dict:
     #         "network": "mainnet"
     #       },
     #       {
-    #         "hash": "***REMOVED***",
+    #         "hash": "",
     #         "timestamp": 1636759124,
     #         "value": 53158198134477620,
     #         "fee": 1811723853282000,

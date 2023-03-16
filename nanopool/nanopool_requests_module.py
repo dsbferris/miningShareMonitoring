@@ -26,10 +26,10 @@ def get_api_data(url: str, fail_count=0) -> list[dict]:
 
 
 def get_data_of_workers() -> list[dict]:
-    nanopool_api_workers = "https://api.nanopool.org/v1/eth/workers/***REMOVED***"
+    nanopool_api_workers = "https://api.nanopool.org/v1/eth/workers/YOURWALLET"
     return get_api_data(nanopool_api_workers)
 
 
 def get_payment_data() -> list[dict]:
-    nanopool_api_payments = "https://api.nanopool.org/v1/eth/payments/***REMOVED***"
+    nanopool_api_payments = "https://api.nanopool.org/v1/eth/payments/YOURWALLET"
     return get_api_data(nanopool_api_payments)
