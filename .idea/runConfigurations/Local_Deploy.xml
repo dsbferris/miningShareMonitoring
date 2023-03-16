@@ -20,7 +20,7 @@
             </DockerEnvVarImpl>
             <DockerEnvVarImpl>
               <option name="name" value="API_KEY" />
-              <option name="value" value="API_KEY" />
+              <option name="value" value="TELEGRAM_BOT_API_KEY" />
             </DockerEnvVarImpl>
             <DockerEnvVarImpl>
               <option name="name" value="PRIVATE_CHAT_ID" />
@@ -32,7 +32,7 @@
             </DockerEnvVarImpl>
             <DockerEnvVarImpl>
               <option name="name" value="MINER_ADDRESS" />
-              <option name="value" value="wallet" />
+              <option name="value" value="YOURWALLET" />
             </DockerEnvVarImpl>
             <DockerEnvVarImpl>
               <option name="name" value="PAYOUT_LIMIT_ETH" />

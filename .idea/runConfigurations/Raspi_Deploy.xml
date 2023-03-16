@@ -20,19 +20,19 @@
             </DockerEnvVarImpl>
             <DockerEnvVarImpl>
               <option name="name" value="API_KEY" />
-              <option name="value" value="API_KEY" />
+              <option name="value" value="" />
             </DockerEnvVarImpl>
             <DockerEnvVarImpl>
               <option name="name" value="PRIVATE_CHAT_ID" />
-              <option name="value" value="privateChatId" />
+              <option name="value" value="" />
             </DockerEnvVarImpl>
             <DockerEnvVarImpl>
               <option name="name" value="GROUP_CHAT_ID" />
-              <option name="value" value="groupChatId" />
+              <option name="value" value="" />
             </DockerEnvVarImpl>
             <DockerEnvVarImpl>
               <option name="name" value="MINER_ADDRESS" />
-              <option name="value" value="wallet" />
+              <option name="value" value="" />
             </DockerEnvVarImpl>
             <DockerEnvVarImpl>
               <option name="name" value="PAYOUT_LIMIT_ETH" />
